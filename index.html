@@ -76,6 +76,7 @@ textarea{min-height:120px;line-height:1.7}
 .big{font-size:48px;font-weight:700}
 .line{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #F0F0F0;font-size:14px;gap:8px}
 .line button{height:36px;border-radius:999px;border:1px solid var(--line);background:#fff;padding:0 12px;font-size:12px}
+#sync{position:fixed;top:10px;right:10px;background:#F3F4F6;color:#4B5563;font-size:12px;padding:4px 10px;border-radius:999px;z-index:9;display:none}
 #toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:#191919;color:#fff;padding:10px 16px;border-radius:14px;font-size:14px;display:none;max-width:90%;z-index:9}
 .err{color:#B42318;font-size:12px}
 .stat{border:1px solid var(--line);border-radius:18px;padding:14px 16px;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}.stat span{width:100%;font-size:12px;color:var(--sub)}.stat b{font-size:28px}.stat small{font-size:13px;color:var(--sub)}
@@ -88,6 +89,7 @@ textarea{min-height:120px;line-height:1.7}
 <body>
 <div id="app"></div>
 <div id="toast"></div>
+<div id="sync" role="status">保存中…</div>
 <script>
 // 通信先：Apps Script。画面がGitHub Pagesにあるときは fetch、Apps Script上で開いたときは google.script.run
 const API_URL = 'https://script.google.com/macros/s/AKfycby0KbqG6fVaHzLWseTRaOo8zou_MuWx7q-s6vGZCJ-iFxdb2SpIxHykPmgmt566qeZa/exec';
@@ -110,7 +112,43 @@ const SCENE = {'01':'01 挨拶のみ','02':'02 会話','03':'03 関心あり','0
 const BLOCKS = {'03':{A:'A 全体',B:'B 人材',C:'C 制作',D:'D 日本語教育',E:'E 協業',F:'F 応援'},'04':{'1':'①資料送付','2':'②日程調整','3':'③ご紹介'},'05':{A:'A 全体',B:'B 人材',C:'C 制作',D:'D 日本語教育',E:'E 協業・拡張'}};
 const needsSched = c => c.scene === '03' || (c.scene === '04' && c.block === '2');
 const jpDate = d => { const x = new Date(d + 'T12:00:00'); return `${x.getMonth()+1}月${x.getDate()}日（${'日月火水木金土'[x.getDay()]}）`; };
-const view = (h, wide = false) => { const a = $('#app'); a.className = wide ? 'wide' : ''; a.innerHTML = h; window.scrollTo(0, 0); };
+let SCR = 0; // 画面を描くたびに増える。古い通信の結果で、もう離れた画面を描き直さないため
+const view = (h, wide = false, keepScroll = false) => { SCR++; const a = $('#app'); a.className = wide ? 'wide' : ''; const y = scrollY; a.innerHTML = h; window.scrollTo(0, keepScroll ? y : 0); };
+
+// ── 速さの工夫1：一度見た画面は端末に覚えておき、すぐ表示 → 裏で最新を取って差し替える
+const ckey = k => 'c:' + K.slice(0, 8) + ':' + k;
+const cget = k => { try { return JSON.parse(localStorage.getItem(ckey(k)) || 'null'); } catch (e) { return null; } };
+const cset = (k, v) => { try { localStorage.setItem(ckey(k), JSON.stringify(v)); } catch (e) {} };
+const cclear = () => { try { Object.keys(localStorage).filter(k => k.startsWith('c:')).forEach(k => localStorage.removeItem(k)); } catch (e) {} };
+// 入力中・取り込み中は描き直さない（打っている文字が消えないように）
+const busy = () => { const a = document.activeElement; return (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName) && a.value) || UPLOADING; };
+let UPLOADING = false;
+async function swr(key, fn, args, render, onErr, wide = false) {
+  const c = cget(key);
+  if (c) render(c, true); else view('<main><p class="note">読み込み中…</p></main>', wide);
+  const my = SCR;
+  try {
+    const v = await run(fn, ...args);
+    cset(key, v);
+    if (SCR !== my) return v;
+    if (!c || JSON.stringify(v) !== JSON.stringify(c)) { if (!c || !busy()) render(v, false); }
+    return v;
+  } catch (e) { if (!c) onErr(e); else if (!/ログイン/.test(e.message)) toast('最新の内容を取得できませんでした（表示は前回の内容です）'); }
+}
+
+// ── 速さの工夫2：書き込みは画面に先に反映し、保存は裏で。失敗したら元に戻して知らせる
+let PENDN = 0;
+const syncShow = () => { $('#sync').style.display = PENDN ? 'block' : 'none'; };
+function bg(p, undo) {
+  PENDN++; syncShow();
+  return p.catch(e => { fail(e); if (undo) undo(e); }).finally(() => { PENDN--; syncShow(); });
+}
+window.addEventListener('beforeunload', e => { if (PENDN) { e.preventDefault(); e.returnValue = ''; } });
+// 作成直後のイベントへの書き込みは、作成の保存が終わってから送る
+const CREATING = {};
+const ready = id => CREATING[id] || Promise.resolve();
+const cacheEv = () => cset('ev:' + S.ev.id, { ev: S.ev, contacts: S.contacts, total: S.total });
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); }));
 const WIDE = () => matchMedia('(min-width: 900px)').matches;
 // 読み込みに失敗したとき、真っ白にせず「もう一度」を出す
 const oops = (e, retry) => view(`<main><p class="err" style="font-size:14px">${esc(e.message || e)}</p><button class="btn2" onclick="${retry}">もう一度読み込む</button></main>`);
@@ -121,6 +159,7 @@ const head = (t, s, back) => `<header><button class="icon" aria-label="戻る" o
 // ───── ホーム ─────
 // ───── ログイン（名前を選んで暗証番号。この端末に記憶） ─────
 async function login() {
+  if (K) cclear();
   store.set('mw_k', ''); K = '';
   const code = store.get('mw_c');
   if (!code) return teamCode();
@@ -156,7 +195,14 @@ function teamCode(msg = '') {
 async function home() {
   if (!K) return login();
   if (WIDE()) return dashboard();
-  try { Object.assign(S, await run('api_init')); } catch (e) { return K && oops(e, 'home()'); }
+  const v = await swr('home', 'api_init', [], d => { Object.assign(S, d); renderHome(); }, e => K && oops(e, 'home()'));
+  if (v) prefetch(v.events);
+}
+// よく開く上位のイベントを裏で読んでおき、タップした瞬間に開けるようにする
+function prefetch(evs) {
+  (evs || []).slice(0, 3).forEach((e, i) => setTimeout(() => run('api_getEvent', e.id).then(d => cset('ev:' + e.id, d)).catch(() => {}), 400 * (i + 1)));
+}
+function renderHome() {
   const sum = S.sum;
   view(head('MW Desk', S.me) + `<main>
     <button class="btn" onclick="newEvent()">＋ イベント作成</button>
@@ -169,8 +215,12 @@ async function home() {
     ${S.events.map(e => `<button class="item" onclick="openEvent('${e.id}')">${esc(e.name)}${sum.draftsBy[e.id] ? ` <span class="tag k">承認待ち ${sum.draftsBy[e.id]}</span>` : ''}<small>${jpDate(e.date)}・${esc(e.members.join('、'))}</small></button>`).join('') || '<p class="note">まだありません</p>'}
   </main><nav class="tabs"><button onclick="contacts()">相手一覧</button><button onclick="settings()">設定</button><button onclick="login()">切り替え</button></nav>`);
 }
-async function actDone(id) {
-  try { S.sum = await run('api_actionDone', id); toast('済にしました'); home(); } catch (e) { fail(e); }
+function actDone(id) {
+  const before = S.sum.actions;
+  S.sum.actions = before.filter(a => a.id !== id);
+  renderHome(); toast('済にしました');
+  bg(run('api_actionDone', id).then(sum => { S.sum = sum; cset('home', { me: S.me, members: S.members, events: S.events, sum }); }),
+    () => { S.sum.actions = before; renderHome(); });
 }
 
 // ───── PC用：上のメニューとダッシュボード ─────
@@ -182,10 +232,11 @@ function bar(on) {
     <button onclick="login()">切り替え</button><button class="new" onclick="newEvent()">＋ イベント作成</button></nav>`;
 }
 async function dashboard() {
-  view(bar('dash') + '<div class="dash"><p class="note">集計中…</p></div>', true);
-  let d;
-  try { const r = await Promise.all([run('api_init'), run('api_dashboard')]); Object.assign(S, r[0]); d = r[1]; S.lead = d.lead; }
-  catch (e) { return K && oops(e, 'home()'); }
+  const v = await swr('dash', 'api_dashboard', [], renderDash, e => K && oops(e, 'home()'), true);
+  if (v) prefetch(v.home.events);
+}
+function renderDash(d) {
+  Object.assign(S, d.home); S.lead = d.lead;
   const k = d.kpi, judge = j => j ? `<span class="pillc ${{ 達成: 'ok', 一部達成: 'mid', 未達: 'ng' }[j]}">${j}</span>` : '<span class="note">—</span>';
   const tile = (t, v, u) => `<div class="stat"><span>${t}</span><b>${v}</b><small>${u}</small></div>`;
   view(bar('dash') + `<div class="dash">
@@ -217,19 +268,23 @@ async function contacts(q = '') {
     <input id="q" type="search" placeholder="社名・氏名・イベント・担当で検索" value="${esc(q)}" aria-label="検索">
     <div id="list"><p class="note">読み込み中…</p></div></main>`);
   let t; $('#q').oninput = () => { clearTimeout(t); t = setTimeout(() => load($('#q').value), 300); };
-  const load = async q => {
-    try {
-      const cs = await run('api_contacts', q);
+  const paint = cs => {
+      if (!$('#list')) return;
       $('#list').innerHTML = !cs.length ? '<p class="note">見つかりません</p>' : wide
         ? `<div class="panel"><table class="t"><tr><th>社名</th><th>氏名</th><th>部署</th><th>イベント</th><th>日付</th><th>担当</th><th>メール</th></tr>${cs.map(c => `<tr class="go" onclick="contact('${c.id}')"><td>${esc(c.company || '社名未読取')}</td><td>${esc(c.name)}</td><td>${esc(c.dept)}</td><td>${esc(c.event)}</td><td>${esc(c.date)}</td><td>${esc(c.by)}</td><td><span class="pillc ${{ draft: 'gray', approved: 'mid', sent: 'ok' }[c.status]}">${STATUS[c.status] || ''}</span></td></tr>`).join('')}</table></div>`
         : cs.map(c => `<button class="item" onclick="contact('${c.id}')">${esc(c.company || '社名未読取')} ${esc(c.name)}<small>${esc(c.event)}（${esc(c.date)}）・担当 ${esc(c.by)}・${STATUS[c.status] || ''}</small></button>`).join('');
-    } catch (e) { fail(e); }
+  };
+  const load = async q => {
+    const key = 'contacts:' + q, c = cget(key);
+    if (c) paint(c);
+    try { const cs = await run('api_contacts', q); cset(key, cs); if ($('#q') && $('#q').value === q) paint(cs); } catch (e) { if (!c) fail(e); }
   };
   load(q);
 }
-async function contact(id) {
-  view('<main><p class="note">読み込み中…</p></main>');
-  let c; try { c = await run('api_contact', id); } catch (e) { fail(e); return contacts(); }
+function contact(id) {
+  swr('contact:' + id, 'api_contact', [id], renderContact, e => { fail(e); contacts(); });
+}
+function renderContact(c) {
   const row = (k, v) => v ? `<div class="line"><span class="note">${k}</span><span style="text-align:right">${esc(v)}</span></div>` : '';
   view(head(c.company || '相手', c.name, 'contacts()') + `<main>
     ${c.img ? `<img src="data:image/jpeg;base64,${c.img}" alt="名刺画像" style="width:100%;border-radius:14px;border:1px solid var(--line)">` : ''}
@@ -242,9 +297,10 @@ async function contact(id) {
 }
 
 // ───── 設定 ─────
-async function settings() {
-  view('<main><p class="note">読み込み中…</p></main>');
-  let st; try { st = await run('api_settings'); } catch (e) { fail(e); return home(); }
+function settings() {
+  swr('settings', 'api_settings', [], renderSettings, e => { fail(e); home(); }, WIDE());
+}
+function renderSettings(st) {
   view((WIDE() ? bar('settings') : head('設定', st.name, 'home()')) + `<main>
     <div class="h2">自分の署名</div>
     <div><label for="ro">氏名のローマ字</label><input id="ro" value="${esc(st.romaji)}" placeholder="Koki Sato"></div>
@@ -257,8 +313,9 @@ async function settings() {
   </main><div class="foot"><button class="btn" id="go">保存する</button></div>`);
   $('#go').onclick = async () => {
     $('#go').disabled = true;
-    try { await run('api_saveSettings', { romaji: $('#ro').value, phone: $('#ph').value, web: $('#web').value, sns: $('#sns').value }); toast('保存しました。未送信のメールの署名も更新しました'); settings(); }
-    catch (e) { fail(e); $('#go').disabled = false; }
+    const f = { romaji: $('#ro').value, phone: $('#ph').value, web: $('#web').value, sns: $('#sns').value };
+    toast('保存しました。未送信のメールの署名も更新します');
+    bg(run('api_saveSettings', f).then(st => { cset('settings', st); if ($('#ro')) renderSettings(st); }), () => { if ($('#go')) $('#go').disabled = false; });
   };
 }
 
@@ -280,22 +337,21 @@ function newEvent() {
       <label class="sw">速報を出す<input type="checkbox" onchange="F.sokuho=this.checked"></label>
       <label class="sw">終了報告をSlackにも投稿する<input type="checkbox" checked onchange="F.slackReport=this.checked"></label></div>
   </main><div class="foot"><button class="btn" id="go">作成する</button><span class="note">Driveのフォルダは、承認が終わったあと自動で作ります</span></div>`);
-  $('#go').onclick = async () => {
-    $('#go').disabled = true;
-    try {
-      const ev = await run('api_createEvent', Object.assign(F, { name: $('#n').value.trim(), date: $('#d').value, fee: $('#fee').value, targets: $('#tg').value, url: $('#url').value.trim() }));
-      openEvent(ev.id);
-    } catch (e) { fail(e); $('#go').disabled = false; }
+  $('#go').onclick = () => {
+    Object.assign(F, { id: uuid(), name: $('#n').value.trim(), date: $('#d').value, fee: $('#fee').value, targets: $('#tg').value, url: $('#url').value.trim() });
+    if (!F.name || !F.date) return fail(new Error('イベント名と日付を入れてください'));
+    S.ev = Object.assign({ memos: [], photos: 0, reports: {}, folderId: '' }, F); S.contacts = []; S.total = 0;
+    S.events = [S.ev].concat(S.events || []);
+    renderEvent();
+    CREATING[F.id] = bg(run('api_createEvent', F).then(ev => { S.ev.id === ev.id && Object.assign(S.ev, ev); cacheEv(); }), () => home());
   };
 }
 
 // ───── イベント（名刺・写真・会場メモ） ─────
-async function openEvent(id) {
-  view('<main><p class="note">読み込み中…</p></main>');
-  try { Object.assign(S, await run('api_getEvent', id)); } catch (e) { return oops(e, `openEvent('${id}')`); }
-  renderEvent();
+function openEvent(id) {
+  return swr('ev:' + id, 'api_getEvent', [id], d => { Object.assign(S, d); renderEvent(); }, e => oops(e, `openEvent('${id}')`));
 }
-function renderEvent() {
+function renderEvent(keepScroll = false) {
   const ev = S.ev, cards = S.contacts, id = ev.id;
   const drafts = cards.filter(c => c.status === 'draft').length;
   view(head(ev.name, jpDate(ev.date), 'home()') + `<main>
@@ -311,7 +367,7 @@ function renderEvent() {
   </main><div class="foot">
     ${cards.some(c => c.status !== 'draft') ? `<button class="btn2" onclick="done()">送信予約を見る</button>` : ''}
     <span class="note">${drafts ? `未承認 ${drafts}人。会場メモ ${ev.memos.length}件をもとに、残りを話して仕上げます` : '名刺を取り込むと次に進めます'}</span>
-    <button class="btn" ${drafts ? '' : 'disabled'} onclick="talk()">まとめて話して仕上げる</button></div>`);
+    <button class="btn" ${drafts ? '' : 'disabled'} onclick="talk()">まとめて話して仕上げる</button></div>`, false, keepScroll);
   // 左にスワイプで「削除」ボタンを出す（スワイプだけでは消えない）
   document.querySelectorAll('.memo[data-j]').forEach(row => {
     let x0 = null, dx = 0;
@@ -319,13 +375,18 @@ function renderEvent() {
     row.addEventListener('touchmove', e => { if (x0 == null) return; dx = Math.min(0, e.touches[0].clientX - x0); row.style.transform = `translateX(${Math.max(dx, -96)}px)`; }, { passive: true });
     row.addEventListener('touchend', () => { row.style.transition = ''; x0 = null; row.style.transform = dx < -48 ? 'translateX(-80px)' : ''; });
   });
-  $('#addm').onclick = async () => {
+  const addMemo = () => {
     const t = $('#memo').value.trim(); if (!t) return;
-    $('#addm').disabled = true;
-    try { S.ev.memos = await run('api_addMemo', id, t); renderEvent(); } catch (e) { fail(e); $('#addm').disabled = false; }
+    const d = new Date(), m = { id: 'tmp' + Date.now(), t: `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`, by: S.me, text: t };
+    S.ev.memos.push(m); cacheEv(); renderEvent(true); $('#memo').focus();
+    bg(ready(id).then(() => run('api_addMemo', id, t)).then(ms => { S.ev.memos = ms; cacheEv(); }),
+      () => { S.ev.memos = S.ev.memos.filter(x => x !== m); renderEvent(true); });
   };
+  $('#addm').onclick = addMemo;
+  $('#memo').onkeydown = e => { if (e.key === 'Enter' && !e.isComposing) addMemo(); };
   $('#up').onchange = async e => {
     const files = [...e.target.files]; if (!files.length) return;
+    UPLOADING = true; await ready(id);
     $('#dropt').textContent = `${files.length}枚を取り込み中…（画面を閉じないでください）`;
     $('#prog').innerHTML = files.map((f, j) => `<div class="up"><img src="${URL.createObjectURL(f)}" alt=""><span id="st${j}">待機中</span></div>`).join('');
     let cardsN = 0, photoN = 0, ng = 0, next = 0;
@@ -340,6 +401,7 @@ function renderEvent() {
     };
     // 3枚ずつ同時に送る（AI無料枠の回数制限に当たりにくい数）
     await Promise.all([0, 1, 2].map(async () => { while (next < files.length) await one(next++); }));
+    UPLOADING = false;
     toast(`名刺 ${cardsN}枚・写真 ${photoN}枚を保存しました${ng ? `（失敗 ${ng}枚）` : ''}`, 4000);
     setTimeout(() => openEvent(id), 1200);
   };
@@ -450,9 +512,11 @@ function reportConfirm(text) {
   };
 }
 
-async function delMemo(j) {
-  try { S.ev.memos = await run('api_deleteMemo', S.ev.id, S.ev.memos[j]); toast('メモを削除しました'); renderEvent(); }
-  catch (e) { fail(e); }
+function delMemo(j) {
+  const id = S.ev.id, before = S.ev.memos.slice(), m = before[j];
+  S.ev.memos.splice(j, 1); cacheEv(); renderEvent(true); toast('メモを削除しました');
+  bg(ready(id).then(() => run('api_deleteMemo', id, m)).then(ms => { S.ev.memos = ms; cacheEv(); }),
+    () => { S.ev.memos = before; renderEvent(true); });
 }
 
 // 送る前に縮小（長辺1280px）して通信量とAIの負担を減らす
@@ -483,7 +547,7 @@ function talk() {
   </main><div class="foot"><button class="btn" id="go">振り分ける</button></div>`);
   $('#go').onclick = async () => {
     $('#go').disabled = true; $('#go').textContent = 'AIが振り分け中…';
-    try { Object.assign(S, await run('api_assign', ev.id, $('#talk').value)); swipe(); }
+    try { Object.assign(S, await run('api_assign', ev.id, $('#talk').value)); cacheEv(); swipe(); }
     catch (e) { fail(e); $('#go').disabled = false; $('#go').textContent = '振り分ける'; }
   };
 }
@@ -549,7 +613,7 @@ async function approve() {
   const err = !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c.email || '') ? 'メールアドレスを確認してください'
     : /〇/.test(c.subject + c.body) ? '「〇〇」が残っています。直してから承認してください' : '';
   if (err) { if (card) card.style.transform = ''; return fail(new Error(err)); }
-  c.status = 'approved';
+  c.status = 'approved'; cacheEv();
   const p = run('api_approve', c.id).catch(e => { c.status = 'draft'; fail(e); if ($('#card') || $('.big')) swipe(); });
   PEND.push(p);
   if (card) { card.style.transform = 'translateX(120%) rotate(12deg)'; await new Promise(r => setTimeout(r, 160)); }
@@ -595,8 +659,10 @@ function done() {
     <span class="note">名刺 ${S.contacts.length}枚・写真 ${ev.photos}枚は、まもなく Drive のイベントフォルダに整理されます</span>
   </main><div class="foot"><button class="btn" onclick="report()">終了報告を仕上げる</button><button class="btn2" onclick="home()">ホームへ</button></div>`);
 }
-async function cancelC(id) {
-  try { await run('api_cancel', id); S.contacts.find(c => c.id === id).status = 'draft'; swipe(); } catch (e) { fail(e); }
+function cancelC(id) {
+  const c = S.contacts.find(x => x.id === id);
+  c.status = 'draft'; cacheEv(); swipe();
+  bg(run('api_cancel', id), () => { c.status = 'approved'; });
 }
 
 home();
