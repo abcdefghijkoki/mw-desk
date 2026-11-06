@@ -19,6 +19,8 @@
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Noto Sans JP',sans-serif;color:var(--ink);background:#fff;-webkit-text-size-adjust:100%}
 #app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
 #app.wide{max-width:1240px}
+#app.wide>main:not(.dash){max-width:560px;width:100%;margin:0 auto}
+#app.wide>.foot{max-width:560px;width:100%;margin:0 auto}
 .bar{display:flex;align-items:center;gap:6px;padding:10px 24px;border-bottom:1px solid #EEE;position:sticky;top:0;background:#fff;z-index:2;flex-wrap:wrap}
 .bar b{font-size:15px;margin-right:auto}.bar button,.bar a{height:36px;padding:0 14px;border-radius:10px;border:0;background:none;font-size:14px;color:var(--ink);text-decoration:none;display:inline-flex;align-items:center}
 .bar .on{background:#F1F1EF;font-weight:600}.bar .new{background:var(--btn);color:#fff}
@@ -28,8 +30,9 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Noto
 .panel{border:1px solid var(--line);border-radius:18px;padding:16px;overflow-x:auto}
 .panel h3{margin:0 0 10px;font-size:13px;font-weight:500;color:var(--sub)}
 table.t{width:100%;border-collapse:collapse;font-size:13px}
-table.t th{text-align:left;font-weight:500;color:var(--sub);padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
-table.t td{padding:10px 8px;border-bottom:1px solid #F3F4F6;white-space:nowrap}
+table.t th{text-align:left;font-weight:500;color:var(--sub);padding:8px;border-bottom:1px solid var(--line);vertical-align:bottom}
+table.t td{padding:10px 8px;border-bottom:1px solid #F3F4F6;overflow-wrap:anywhere}
+table.t td.n,table.t td:first-child{white-space:nowrap}
 table.t td.n{text-align:right;font-variant-numeric:tabular-nums}
 table.t tr.go{cursor:pointer}table.t tr.go:hover td{background:#FAFAFA}
 .pillc{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px}
@@ -37,7 +40,8 @@ table.t tr.go{cursor:pointer}table.t tr.go:hover td{background:#FAFAFA}
 .alert{border:1px solid #FDE2E1;background:#FFF5F5;border-radius:14px;padding:12px 16px;font-size:13px;color:#B42318}
 @media (max-width:1100px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.cols{grid-template-columns:1fr}}
 header{display:flex;align-items:center;justify-content:space-between;padding:8px;padding-top:max(8px,env(safe-area-inset-top));border-bottom:1px solid #EEE;position:sticky;top:0;background:#fff;z-index:2}
-header .t{font-size:15px;font-weight:600;text-align:center}
+header .t{font-size:15px;font-weight:600;text-align:center;min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header .t .s{overflow:hidden;text-overflow:ellipsis}
 header .s{font-size:11px;color:var(--sub)}
 .icon{width:44px;height:44px;border:0;background:none;font-size:20px;color:var(--ink)}
 main{flex:1;padding:20px;display:flex;flex-direction:column;gap:18px}
@@ -49,6 +53,14 @@ main{flex:1;padding:20px;display:flex;flex-direction:column;gap:18px}
 label,.lab{font-size:13px;color:var(--sub);display:block;margin-bottom:6px}
 input,textarea,select{width:100%;border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:16px;font-family:inherit;color:var(--ink);background:#fff}
 textarea{min-height:120px;line-height:1.7}
+/* 入力欄の高さをそろえる。iPhoneの日付・日時欄は中身に合わせて広がり、隣の欄にはみ出すので幅を固定する */
+input,select{height:48px;min-width:0;max-width:100%;-webkit-appearance:none;appearance:none}
+input[type=checkbox]{height:auto;-webkit-appearance:auto;appearance:auto}
+input[type=date],input[type=datetime-local]{display:block;width:100%;text-align:left;line-height:22px}
+input::-webkit-date-and-time-value{text-align:left;margin:0}
+input::-webkit-datetime-edit{padding:0}
+select{background-image:linear-gradient(45deg,transparent 50%,var(--sub) 50%),linear-gradient(135deg,var(--sub) 50%,transparent 50%);background-position:calc(100% - 20px) 21px,calc(100% - 15px) 21px;background-size:5px 5px;background-repeat:no-repeat;padding-right:36px}
+.row>*{min-width:0}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .pills{display:flex;gap:8px;flex-wrap:wrap}
 .pill{height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:#fff;font-size:13px;color:var(--ink)}
@@ -81,6 +93,7 @@ textarea{min-height:120px;line-height:1.7}
 .round.ok{background:var(--btn);color:#fff;border:0}
 .big{font-size:48px;font-weight:700}
 .line{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #F0F0F0;font-size:14px;gap:8px}
+.line>:first-child{min-width:0;overflow-wrap:anywhere}.line>:last-child:not(:first-child){flex:none}
 .line button{height:36px;border-radius:999px;border:1px solid var(--line);background:#fff;padding:0 12px;font-size:12px}
 #sync{position:fixed;top:10px;right:10px;background:#F3F4F6;color:#4B5563;font-size:12px;padding:4px 10px;border-radius:999px;z-index:9;display:none}
 #toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:#191919;color:#fff;padding:10px 16px;border-radius:14px;font-size:14px;display:none;max-width:90%;z-index:9}
@@ -272,7 +285,7 @@ async function contacts(q = '') {
   const wide = WIDE();
   view((wide ? bar('contacts') : head('相手一覧', 'チーム全員分', 'home()')) + `<main${wide ? ' class="dash"' : ''}>
     <input id="q" type="search" placeholder="社名・氏名・イベント・担当で検索" value="${esc(q)}" aria-label="検索">
-    <div id="list"><p class="note">読み込み中…</p></div></main>`);
+    <div id="list"><p class="note">読み込み中…</p></div></main>`, wide);
   let t; $('#q').oninput = () => { clearTimeout(t); t = setTimeout(() => load($('#q').value), 300); };
   const paint = cs => {
       if (!$('#list')) return;
@@ -316,7 +329,7 @@ function renderSettings(st) {
     <div><label for="sns">SNS</label><input id="sns" value="${esc(st.sns)}" placeholder="例）Instagram：@miraiway"></div>
     <div><div class="h2">署名のプレビュー</div><div class="mail" style="max-height:none">${esc(st.preview)}</div></div>
     <span class="note">氏名を変えるときは、管理者が members シートで直します</span>
-  </main><div class="foot"><button class="btn" id="go">保存する</button></div>`);
+  </main><div class="foot"><button class="btn" id="go">保存する</button></div>`, WIDE());
   $('#go').onclick = async () => {
     $('#go').disabled = true;
     const f = { romaji: $('#ro').value, phone: $('#ph').value, web: $('#web').value, sns: $('#sns').value };
@@ -367,11 +380,11 @@ function renderEvent(keepScroll = false) {
     <input id="up" type="file" accept="image/*,.heic,.heif" multiple style="display:none">
     <div id="prog"></div>
     ${cards.map(c => `<div class="line"><span>${esc(c.company || '社名未読取')} ${esc(c.name)}</span><span class="tag">${STATUS[c.status]}</span></div>`).join('')}
+    ${cards.some(c => c.status !== 'draft') ? `<button class="btn2" onclick="done()">送信予約を見る</button>` : ''}
     <div class="h2">会場メモ</div>
     ${ev.memos.map((m, j) => `<div class="mrow"><button class="mdel" onclick="delMemo(${j})">削除</button><div class="memo" data-j="${j}"><span>${esc(m.t)}</span><div>${esc(m.text)}</div></div></div>`).join('')}
     <div class="add"><input id="memo" placeholder="メモを追加（キーボードのマイクで話せます）"><button id="addm">追加</button></div>
   </main><div class="foot">
-    ${cards.some(c => c.status !== 'draft') ? `<button class="btn2" onclick="done()">送信予約を見る</button>` : ''}
     <span class="note">${drafts ? `未承認 ${drafts}人。会場メモ ${ev.memos.length}件をもとに、残りを話して仕上げます` : '名刺を取り込むと次に進めます'}</span>
     <button class="btn" ${drafts ? '' : 'disabled'} onclick="talk()">まとめて話して仕上げる</button></div>`, false, keepScroll);
   // 左にスワイプで「削除」ボタンを出す（スワイプだけでは消えない）
@@ -566,7 +579,7 @@ function swipe() {
   const sched = needsSched(c) ? `<div><span class="lab">日程</span><div class="seg2">
       <button class="${c.schedMode !== 'ask' ? 'on' : ''}" onclick="setSched('dates')">候補日を送る</button>
       <button class="${c.schedMode === 'ask' ? 'on' : ''}" onclick="setSched('ask')">日程を聞く</button></div>
-      ${c.schedMode !== 'ask' ? [0,1,2].map(j => `<input type="datetime-local" style="margin-top:8px" data-j="${j}" value="${esc((c.dtRaw || [])[j] || '')}" onchange="setDate()">`).join('') : ''}</div>` : '';
+      ${c.schedMode !== 'ask' ? [0,1,2].map(j => `<label class="lab" style="margin:10px 0 4px" for="dt${j}">候補${j + 1}</label><input type="datetime-local" id="dt${j}" data-j="${j}" value="${esc((c.dtRaw || [])[j] || '')}" onchange="setDate()">`).join('') : ''}</div>` : '';
   view(head('確認と承認', `${i}/${all.length}`, `openEvent('${ev.id}')`) + `
     <div style="height:3px;background:#EEE"><div style="width:${(i - 1) / all.length * 100}%;height:3px;background:#191919"></div></div>
     <div class="deck"><article class="card" id="card">
@@ -632,8 +645,9 @@ function edit() {
   view(head('直す', c.company + ' ' + c.name, 'swipe()') + `<main>
     <div class="row"><div><label for="sc">シーン</label><select id="sc">${sc.map(s => `<option value="${s}" ${s === c.scene ? 'selected' : ''}>${SCENE[s]}</option>`).join('')}</select></div>
       <div><label for="bl">ブロック</label><select id="bl" ${Object.keys(bl).length ? '' : 'disabled'}><option value="">—</option>${Object.entries(bl).map(([k, v]) => `<option value="${k}" ${k === c.block ? 'selected' : ''}>${v}</option>`).join('')}</select></div></div>
-    <div class="row"><div><label for="co">社名</label><input id="co" value="${esc(c.company)}"></div><div><label for="nm">氏名</label><input id="nm" value="${esc(c.name)}"></div></div>
-    <div class="row"><div><label for="dp">部署</label><input id="dp" value="${esc(c.dept)}"></div><div><label for="ti">役職</label><input id="ti" value="${esc(c.title)}"></div></div>
+    <div><label for="co">社名</label><input id="co" value="${esc(c.company)}"></div>
+    <div><label for="dp">部署</label><input id="dp" value="${esc(c.dept)}"></div>
+    <div class="row"><div><label for="nm">氏名</label><input id="nm" value="${esc(c.name)}"></div><div><label for="ti">役職</label><input id="ti" value="${esc(c.title)}"></div></div>
     <div><label for="em" class="req">メールアドレス</label><input id="em" type="email" value="${esc(c.email)}"></div>
     <div><label for="sj">件名</label><input id="sj" value="${esc(c.subject)}"></div>
     <div><label for="bd">本文（直接直すと、以後は自動で組み直しません）</label><textarea id="bd" style="min-height:420px">${esc(c.body)}</textarea></div>
