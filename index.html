@@ -3,9 +3,15 @@
 <head>
 <base target="_top">
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>MW Desk</title>
 <meta name="apple-mobile-web-app-title" content="MW Desk">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#ffffff">
 <style>
 :root{--ink:#111827;--sub:#6B7280;--line:#E5E7EB;--soft:#F7F7F8;--btn:#191919}
@@ -30,12 +36,12 @@ table.t tr.go{cursor:pointer}table.t tr.go:hover td{background:#FAFAFA}
 .ok{background:#DCFCE7;color:#166534}.mid{background:#FEF3C7;color:#92400E}.ng{background:#FDE2E1;color:#B42318}.gray{background:#F3F4F6;color:#4B5563}
 .alert{border:1px solid #FDE2E1;background:#FFF5F5;border-radius:14px;padding:12px 16px;font-size:13px;color:#B42318}
 @media (max-width:1100px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.cols{grid-template-columns:1fr}}
-header{display:flex;align-items:center;justify-content:space-between;padding:8px;border-bottom:1px solid #EEE;position:sticky;top:0;background:#fff;z-index:2}
+header{display:flex;align-items:center;justify-content:space-between;padding:8px;padding-top:max(8px,env(safe-area-inset-top));border-bottom:1px solid #EEE;position:sticky;top:0;background:#fff;z-index:2}
 header .t{font-size:15px;font-weight:600;text-align:center}
 header .s{font-size:11px;color:var(--sub)}
 .icon{width:44px;height:44px;border:0;background:none;font-size:20px;color:var(--ink)}
 main{flex:1;padding:20px;display:flex;flex-direction:column;gap:18px}
-.foot{padding:12px 20px 28px;border-top:1px solid #EEE;display:flex;flex-direction:column;gap:8px;position:sticky;bottom:0;background:#fff}
+.foot{padding:12px 20px max(28px,env(safe-area-inset-bottom));border-top:1px solid #EEE;display:flex;flex-direction:column;gap:8px;position:sticky;bottom:0;background:#fff}
 .btn{height:52px;border-radius:14px;border:0;background:var(--btn);color:#fff;font-size:16px;font-weight:600;width:100%}
 .btn:disabled{opacity:.35}
 .btn2{height:48px;border-radius:14px;border:1px solid var(--line);background:#fff;font-size:14px;width:100%;color:var(--ink)}
