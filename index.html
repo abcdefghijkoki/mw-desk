@@ -1,0 +1,605 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MW Desk</title>
+<meta name="apple-mobile-web-app-title" content="MW Desk">
+<meta name="theme-color" content="#ffffff">
+<style>
+:root{--ink:#111827;--sub:#6B7280;--line:#E5E7EB;--soft:#F7F7F8;--btn:#191919}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Noto Sans JP',sans-serif;color:var(--ink);background:#fff;-webkit-text-size-adjust:100%}
+#app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+#app.wide{max-width:1240px}
+.bar{display:flex;align-items:center;gap:6px;padding:10px 24px;border-bottom:1px solid #EEE;position:sticky;top:0;background:#fff;z-index:2;flex-wrap:wrap}
+.bar b{font-size:15px;margin-right:auto}.bar button,.bar a{height:36px;padding:0 14px;border-radius:10px;border:0;background:none;font-size:14px;color:var(--ink);text-decoration:none;display:inline-flex;align-items:center}
+.bar .on{background:#F1F1EF;font-weight:600}.bar .new{background:var(--btn);color:#fff}
+.dash{padding:24px;display:flex;flex-direction:column;gap:20px}
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+.cols{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:20px;align-items:start}
+.panel{border:1px solid var(--line);border-radius:18px;padding:16px;overflow-x:auto}
+.panel h3{margin:0 0 10px;font-size:13px;font-weight:500;color:var(--sub)}
+table.t{width:100%;border-collapse:collapse;font-size:13px}
+table.t th{text-align:left;font-weight:500;color:var(--sub);padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.t td{padding:10px 8px;border-bottom:1px solid #F3F4F6;white-space:nowrap}
+table.t td.n{text-align:right;font-variant-numeric:tabular-nums}
+table.t tr.go{cursor:pointer}table.t tr.go:hover td{background:#FAFAFA}
+.pillc{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px}
+.ok{background:#DCFCE7;color:#166534}.mid{background:#FEF3C7;color:#92400E}.ng{background:#FDE2E1;color:#B42318}.gray{background:#F3F4F6;color:#4B5563}
+.alert{border:1px solid #FDE2E1;background:#FFF5F5;border-radius:14px;padding:12px 16px;font-size:13px;color:#B42318}
+@media (max-width:1100px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.cols{grid-template-columns:1fr}}
+header{display:flex;align-items:center;justify-content:space-between;padding:8px;border-bottom:1px solid #EEE;position:sticky;top:0;background:#fff;z-index:2}
+header .t{font-size:15px;font-weight:600;text-align:center}
+header .s{font-size:11px;color:var(--sub)}
+.icon{width:44px;height:44px;border:0;background:none;font-size:20px;color:var(--ink)}
+main{flex:1;padding:20px;display:flex;flex-direction:column;gap:18px}
+.foot{padding:12px 20px 28px;border-top:1px solid #EEE;display:flex;flex-direction:column;gap:8px;position:sticky;bottom:0;background:#fff}
+.btn{height:52px;border-radius:14px;border:0;background:var(--btn);color:#fff;font-size:16px;font-weight:600;width:100%}
+.btn:disabled{opacity:.35}
+.btn2{height:48px;border-radius:14px;border:1px solid var(--line);background:#fff;font-size:14px;width:100%;color:var(--ink)}
+.note{font-size:12px;color:var(--sub);text-align:center}
+label,.lab{font-size:13px;color:var(--sub);display:block;margin-bottom:6px}
+input,textarea,select{width:100%;border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:16px;font-family:inherit;color:var(--ink);background:#fff}
+textarea{min-height:120px;line-height:1.7}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pills{display:flex;gap:8px;flex-wrap:wrap}
+.pill{height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:#fff;font-size:13px;color:var(--ink)}
+.pill.on{background:var(--btn);color:#fff;border-color:var(--btn)}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.seg2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seg button,.seg2 button{height:44px;border-radius:14px;border:1px solid var(--line);background:#fff;font-size:14px;color:var(--ink)}
+.seg button.on,.seg2 button.on{background:var(--btn);color:#fff;border-color:var(--btn)}
+.sw{display:flex;justify-content:space-between;align-items:center;min-height:44px;border-bottom:1px solid #F0F0F0;font-size:14px;color:var(--ink);margin:0}
+.sw input{width:auto}
+.item{display:block;width:100%;text-align:left;padding:16px;border:1px solid var(--line);border-radius:18px;background:#fff;color:var(--ink);font-size:15px}
+.item small{display:block;color:var(--sub);font-size:12px;margin-top:4px}
+.h2{margin:0;font-size:13px;font-weight:500;color:var(--sub);display:flex;justify-content:space-between}
+.mrow{position:relative;overflow:hidden;border-radius:10px}.mdel{position:absolute;right:0;top:0;bottom:0;width:80px;border:0;background:#B42318;color:#fff;font-size:14px}
+.memo{display:flex;gap:12px;font-size:14px;line-height:1.6;background:#fff;position:relative;padding:6px 0;transition:transform .2s;touch-action:pan-y}.memo span{font-size:12px;color:#9CA3AF;width:36px;flex:none}
+.add{display:flex;gap:8px}.add input{flex:1}.add button{width:64px;border-radius:14px;border:0;background:#F3F4F6;font-size:14px}
+.drop{display:flex;align-items:center;justify-content:center;height:96px;border:1px dashed #C7CCD4;border-radius:14px;font-size:14px;color:var(--sub);text-align:center;padding:8px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.chip{flex:none;padding:6px 10px;border:1px solid var(--line);border-radius:999px;font-size:13px}
+.deck{position:relative;flex:1;background:#FAFAFA;padding:20px}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:14px;touch-action:pan-y;transition:transform .2s}
+.card .co{font-size:12px;color:var(--sub)}.card .nm{font-size:22px;font-weight:700}
+.tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{padding:4px 8px;border-radius:999px;border:1px solid var(--line);font-size:12px}.tag.k{background:#F1F1EF;border-color:#F1F1EF;font-weight:600}
+.kv{display:flex;justify-content:space-between;font-size:13px;padding:10px 0;border-top:1px solid #F0F0F0;border-bottom:1px solid #F0F0F0;gap:12px}.kv span:first-child{color:var(--sub);flex:none}
+.mail{font-size:13px;line-height:1.7;color:#374151;white-space:pre-wrap;max-height:180px;overflow:hidden}
+.reason{font-size:12px;color:var(--sub)}
+.acts{display:flex;justify-content:center;gap:40px;padding:16px 0 4px}
+.round{width:64px;height:64px;border-radius:32px;border:1px solid var(--line);background:#fff;font-size:22px}
+.round.ok{background:var(--btn);color:#fff;border:0}
+.big{font-size:48px;font-weight:700}
+.line{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #F0F0F0;font-size:14px;gap:8px}
+.line button{height:36px;border-radius:999px;border:1px solid var(--line);background:#fff;padding:0 12px;font-size:12px}
+#toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:#191919;color:#fff;padding:10px 16px;border-radius:14px;font-size:14px;display:none;max-width:90%;z-index:9}
+.err{color:#B42318;font-size:12px}
+.stat{border:1px solid var(--line);border-radius:18px;padding:14px 16px;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}.stat span{width:100%;font-size:12px;color:var(--sub)}.stat b{font-size:28px}.stat small{font-size:13px;color:var(--sub)}
+.tabs{position:sticky;bottom:0;display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #EEE;background:#fff;padding:6px 8px 20px}.tabs button{height:48px;border:0;background:none;font-size:14px;color:var(--ink)}
+.req::after{content:' ＊';color:#B42318;font-weight:700}
+.reqnote{font-size:12px;color:var(--sub)}.reqnote b{color:#B42318}
+.up{display:flex;align-items:center;gap:12px;padding:6px 0;font-size:13px}.up img{width:56px;height:40px;object-fit:cover;border-radius:8px;border:1px solid var(--line);flex:none}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast"></div>
+<script>
+// 通信先：Apps Script。画面がGitHub Pagesにあるときは fetch、Apps Script上で開いたときは google.script.run
+const API_URL = 'https://script.google.com/macros/s/AKfycby0KbqG6fVaHzLWseTRaOo8zou_MuWx7q-s6vGZCJ-iFxdb2SpIxHykPmgmt566qeZa/exec';
+const store = { get: k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } },
+  set: (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (e) {} } };
+let K = store.get('mw_k');
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Googleのログイン情報は送らない（credentials: 'omit'）。本文はtext/plainで送り、余計な事前確認の通信を起こさない
+const call = (fn, ...a) => window.google && google.script
+  ? new Promise((ok, ng) => google.script.run.withSuccessHandler(ok).withFailureHandler(ng)[fn](...a))
+  : fetch(API_URL, { method: 'POST', body: JSON.stringify({ fn, args: a }), credentials: 'omit', redirect: 'follow' })
+      .catch(() => { throw new Error('通信できませんでした。電波を確認してもう一度お試しください'); })
+      .then(r => r.json()).then(j => { if (!j.ok) throw new Error(j.error); return j.data; });
+const run = (fn, ...a) => call(fn, K, ...a).catch(e => { if (/LOGIN/.test(e.message)) { login(); throw new Error('ログインしてください'); } throw e; });
+const toast = (m, ms = 3000) => { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', ms); };
+const fail = e => toast(e.message || String(e), 5000);
+const S = { me: '', members: [], events: [], ev: null, contacts: [] };
+const SCENE = {'01':'01 挨拶のみ','02':'02 会話','03':'03 関心あり','04':'04 約束あり','05':'05 紹介のお願い'};
+const BLOCKS = {'03':{A:'A 全体',B:'B 人材',C:'C 制作',D:'D 日本語教育',E:'E 協業',F:'F 応援'},'04':{'1':'①資料送付','2':'②日程調整','3':'③ご紹介'},'05':{A:'A 全体',B:'B 人材',C:'C 制作',D:'D 日本語教育',E:'E 協業・拡張'}};
+const needsSched = c => c.scene === '03' || (c.scene === '04' && c.block === '2');
+const jpDate = d => { const x = new Date(d + 'T12:00:00'); return `${x.getMonth()+1}月${x.getDate()}日（${'日月火水木金土'[x.getDay()]}）`; };
+const view = (h, wide = false) => { const a = $('#app'); a.className = wide ? 'wide' : ''; a.innerHTML = h; window.scrollTo(0, 0); };
+const WIDE = () => matchMedia('(min-width: 900px)').matches;
+// 読み込みに失敗したとき、真っ白にせず「もう一度」を出す
+const oops = (e, retry) => view(`<main><p class="err" style="font-size:14px">${esc(e.message || e)}</p><button class="btn2" onclick="${retry}">もう一度読み込む</button></main>`);
+const STATUS = { draft: '未承認', approved: '予約済', sent: '送信済' };
+const sendDay = () => { const n = new Date(); return n.getHours() * 60 + n.getMinutes() < 390 ? '今日' : '明日'; };
+const head = (t, s, back) => `<header><button class="icon" aria-label="戻る" onclick="${back || ''}" ${back ? '' : 'style="visibility:hidden"'}>‹</button><div class="t">${esc(t)}${s ? `<div class="s">${esc(s)}</div>` : ''}</div><span style="width:44px"></span></header>`;
+
+// ───── ホーム ─────
+// ───── ログイン（名前を選んで暗証番号。この端末に記憶） ─────
+async function login() {
+  store.set('mw_k', ''); K = '';
+  const code = store.get('mw_c');
+  if (!code) return teamCode();
+  view('<main><p class="note">読み込み中…</p></main>');
+  let names;
+  try { names = await call('api_names', code); }
+  catch (e) { if (/チームコード/.test(e.message)) { store.set('mw_c', ''); return teamCode(e.message); } return oops(e, 'login()'); }
+  view(head('MW Desk') + `<main>
+    <div class="h2">あなたはどなたですか？</div>
+    ${names.map(n => `<button class="item" onclick="pick(this.textContent)">${esc(n)}</button>`).join('')}
+  </main>`);
+}
+async function pick(name) {
+  try {
+    K = (await call('api_login', name, store.get('mw_c'))).token;
+    store.set('mw_k', K);
+    home();
+  } catch (e) { fail(e); }
+}
+// 端末ごとに最初の1回だけ、チーム共通コードを入れる
+function teamCode(msg = '') {
+  view(head('MW Desk') + `<main>
+    <div><label for="tc" class="req">チームコード</label><input id="tc" type="password" autocomplete="off" aria-required="true"></div>
+    <span class="note" style="text-align:left">この端末では最初の1回だけです。コードはメンバー内で共有されています</span>
+    ${msg ? `<span class="err">${esc(msg)}</span>` : ''}
+  </main><div class="foot"><button class="btn" id="go">次へ</button></div>`);
+  const go = () => { const v = $('#tc').value.trim(); if (!v) return; store.set('mw_c', v); login(); };
+  $('#go').onclick = go;
+  $('#tc').onkeydown = e => { if (e.key === 'Enter') go(); };
+  $('#tc').focus();
+}
+
+async function home() {
+  if (!K) return login();
+  if (WIDE()) return dashboard();
+  try { Object.assign(S, await run('api_init')); } catch (e) { return K && oops(e, 'home()'); }
+  const sum = S.sum;
+  view(head('MW Desk', S.me) + `<main>
+    <button class="btn" onclick="newEvent()">＋ イベント作成</button>
+    <div class="row">
+      <div class="stat"><span>承認待ち</span><b>${sum.drafts}</b><small>件</small></div>
+      <div class="stat"><span>期限が近い</span><b>${sum.actions.length}</b><small>件</small></div>
+    </div>
+    ${sum.actions.length ? `<div><div class="h2">次にやること（7日以内・期限切れ）</div>${sum.actions.map(a => `<div class="line"><span>${a.late ? '<b class="err">期限切れ</b> ' : ''}${esc(a.company)} ${esc(a.name)}<br><small class="note">${esc(a.next)}${a.due ? '・' + esc(a.due) : ''}</small></span><button onclick="actDone('${a.id}')">済にする</button></div>`).join('')}</div>` : ''}
+    <div class="h2">自分のイベント</div>
+    ${S.events.map(e => `<button class="item" onclick="openEvent('${e.id}')">${esc(e.name)}${sum.draftsBy[e.id] ? ` <span class="tag k">承認待ち ${sum.draftsBy[e.id]}</span>` : ''}<small>${jpDate(e.date)}・${esc(e.members.join('、'))}</small></button>`).join('') || '<p class="note">まだありません</p>'}
+  </main><nav class="tabs"><button onclick="contacts()">相手一覧</button><button onclick="settings()">設定</button><button onclick="login()">切り替え</button></nav>`);
+}
+async function actDone(id) {
+  try { S.sum = await run('api_actionDone', id); toast('済にしました'); home(); } catch (e) { fail(e); }
+}
+
+// ───── PC用：上のメニューとダッシュボード ─────
+function bar(on) {
+  const b = (k, t, fn) => `<button class="${on === k ? 'on' : ''}" onclick="${fn}">${t}</button>`;
+  return `<nav class="bar"><b>MW Desk <small class="note">${esc(S.me)}</small></b>
+    ${b('dash', 'ダッシュボード', 'home()')}${b('contacts', '相手一覧', 'contacts()')}${b('settings', '設定', 'settings()')}
+    ${S.lead ? `<a href="${esc(S.lead)}" target="_blank" rel="noopener">リード表 ↗</a>` : ''}
+    <button onclick="login()">切り替え</button><button class="new" onclick="newEvent()">＋ イベント作成</button></nav>`;
+}
+async function dashboard() {
+  view(bar('dash') + '<div class="dash"><p class="note">集計中…</p></div>', true);
+  let d;
+  try { const r = await Promise.all([run('api_init'), run('api_dashboard')]); Object.assign(S, r[0]); d = r[1]; S.lead = d.lead; }
+  catch (e) { return K && oops(e, 'home()'); }
+  const k = d.kpi, judge = j => j ? `<span class="pillc ${{ 達成: 'ok', 一部達成: 'mid', 未達: 'ng' }[j]}">${j}</span>` : '<span class="note">—</span>';
+  const tile = (t, v, u) => `<div class="stat"><span>${t}</span><b>${v}</b><small>${u}</small></div>`;
+  view(bar('dash') + `<div class="dash">
+    ${d.errors.length ? `<div class="alert">送信できなかったメールが ${d.errors.length}件あります（翌朝もう一度送ります）：${d.errors.map(e => `${esc(e.company)} ${esc(e.name)}（担当 ${esc(e.by)}）`).join('、')}</div>` : ''}
+    <div class="h2">${esc(d.month.replace('-', '年'))}月</div>
+    <div class="kpis">${tile('イベント', k.events, '件')}${tile('名刺交換', k.cards, '枚')}${tile('ターゲット該当', k.target, '枚')}${tile('深く話せた', k.deep, '社')}${tile('お礼メール送信', k.sent, '通')}${tile('承認待ち（全体）', k.drafts, '件')}</div>
+    <div class="cols">
+      <div class="panel"><h3>イベント</h3><table class="t">
+        <tr><th>日付</th><th>イベント</th><th>熱さ</th><th>名刺</th><th>該当</th><th>深い</th><th>承認待ち</th><th>送信済</th><th>終了報告</th><th>持ち帰り</th><th>Slack</th></tr>
+        ${d.events.map(e => `<tr class="go" onclick="openEvent('${e.id}')"><td>${esc(e.date)}</td><td>${esc(e.name)}</td><td>${esc(e.heat)}</td>
+          <td class="n">${e.cards}</td><td class="n">${e.target}</td><td class="n">${e.deep}</td>
+          <td class="n">${e.drafts ? `<span class="pillc mid">${e.drafts}</span>` : 0}</td><td class="n">${e.sent}</td>
+          <td class="n">${e.reports}/${e.members.length}</td><td>${judge(e.judge)}</td><td>${e.slack ? '✓' : ''}</td></tr>`).join('') || '<tr><td colspan="11" class="note">まだありません</td></tr>'}
+      </table></div>
+      <div style="display:flex;flex-direction:column;gap:20px">
+        <div class="panel"><h3>次にやること（チーム・2週間以内）</h3>
+          ${d.actions.map(a => `<div class="line"><span>${esc(a.company)} ${esc(a.name)}<br><small class="note">${esc(a.next)}・担当 ${esc(a.by)}</small></span><span class="pillc ${a.late ? 'ng' : 'gray'}">${a.due ? esc(a.due.slice(5).replace('-', '/')) : '期限なし'}</span></div>`).join('') || '<p class="note">ありません</p>'}</div>
+        <div class="panel"><h3>メンバー</h3><table class="t"><tr><th>名前</th><th>名刺</th><th>承認待ち</th><th>期限切れ</th><th>報告未提出</th></tr>
+          ${d.people.map(p => `<tr><td>${esc(p.name)}</td><td class="n">${p.cards}</td><td class="n">${p.drafts || 0}</td>
+            <td class="n">${p.late ? `<span class="pillc ng">${p.late}</span>` : 0}</td><td class="n">${p.owed ? `<span class="pillc mid">${p.owed}</span>` : 0}</td></tr>`).join('')}</table></div>
+      </div>
+    </div></div>`, true);
+}
+
+// ───── 相手一覧 ─────
+async function contacts(q = '') {
+  const wide = WIDE();
+  view((wide ? bar('contacts') : head('相手一覧', 'チーム全員分', 'home()')) + `<main${wide ? ' class="dash"' : ''}>
+    <input id="q" type="search" placeholder="社名・氏名・イベント・担当で検索" value="${esc(q)}" aria-label="検索">
+    <div id="list"><p class="note">読み込み中…</p></div></main>`);
+  let t; $('#q').oninput = () => { clearTimeout(t); t = setTimeout(() => load($('#q').value), 300); };
+  const load = async q => {
+    try {
+      const cs = await run('api_contacts', q);
+      $('#list').innerHTML = !cs.length ? '<p class="note">見つかりません</p>' : wide
+        ? `<div class="panel"><table class="t"><tr><th>社名</th><th>氏名</th><th>部署</th><th>イベント</th><th>日付</th><th>担当</th><th>メール</th></tr>${cs.map(c => `<tr class="go" onclick="contact('${c.id}')"><td>${esc(c.company || '社名未読取')}</td><td>${esc(c.name)}</td><td>${esc(c.dept)}</td><td>${esc(c.event)}</td><td>${esc(c.date)}</td><td>${esc(c.by)}</td><td><span class="pillc ${{ draft: 'gray', approved: 'mid', sent: 'ok' }[c.status]}">${STATUS[c.status] || ''}</span></td></tr>`).join('')}</table></div>`
+        : cs.map(c => `<button class="item" onclick="contact('${c.id}')">${esc(c.company || '社名未読取')} ${esc(c.name)}<small>${esc(c.event)}（${esc(c.date)}）・担当 ${esc(c.by)}・${STATUS[c.status] || ''}</small></button>`).join('');
+    } catch (e) { fail(e); }
+  };
+  load(q);
+}
+async function contact(id) {
+  view('<main><p class="note">読み込み中…</p></main>');
+  let c; try { c = await run('api_contact', id); } catch (e) { fail(e); return contacts(); }
+  const row = (k, v) => v ? `<div class="line"><span class="note">${k}</span><span style="text-align:right">${esc(v)}</span></div>` : '';
+  view(head(c.company || '相手', c.name, 'contacts()') + `<main>
+    ${c.img ? `<img src="data:image/jpeg;base64,${c.img}" alt="名刺画像" style="width:100%;border-radius:14px;border:1px solid var(--line)">` : ''}
+    <div>${row('氏名', c.name)}${row('社名', c.company)}${row('部署', c.dept)}${row('役職', c.title)}${row('メール', c.email)}${row('電話', c.phone)}</div>
+    <div>${row('イベント', `${c.eventName}（${c.eventDate}）`)}${row('担当', c.by)}${row('ターゲット区分', c.target)}${row('深く話せた', c.deep ? 'はい' : '')}${row('事業', c.biz)}${row('連携', c.link)}${row('次にやること', c.next && c.next !== 'なし' ? `${c.next}${c.due ? '・' + c.due : ''}${c.nextDone ? '（済）' : ''}` : '')}${row('メール', { draft: '未承認', approved: '予約済', sent: '送信済' }[c.status])}</div>
+    ${c.met.length ? `<div class="note" style="text-align:left">ほかに会ったイベント：${esc(c.met.join('、'))}</div>` : ''}
+    ${c.note ? `<div><div class="h2">話した内容</div><p style="font-size:14px;line-height:1.7">${esc(c.note)}</p></div>` : ''}
+    ${c.subject ? `<div><div class="h2">送ったメール</div><div class="mail" style="max-height:none">件名：${esc(c.subject)}\n\n${esc(c.body)}</div></div>` : ''}
+  </main>`);
+}
+
+// ───── 設定 ─────
+async function settings() {
+  view('<main><p class="note">読み込み中…</p></main>');
+  let st; try { st = await run('api_settings'); } catch (e) { fail(e); return home(); }
+  view((WIDE() ? bar('settings') : head('設定', st.name, 'home()')) + `<main>
+    <div class="h2">自分の署名</div>
+    <div><label for="ro">氏名のローマ字</label><input id="ro" value="${esc(st.romaji)}" placeholder="Koki Sato"></div>
+    <div><label for="ph">電話番号</label><input id="ph" type="tel" value="${esc(st.phone)}" placeholder="080-0000-0000"></div>
+    <div class="h2">全員共通（入れた時点で全メールに表示）</div>
+    <div><label for="web">MiraiWayのWebサイト</label><input id="web" type="url" value="${esc(st.web)}" placeholder="12月の公開後に入れる"></div>
+    <div><label for="sns">SNS</label><input id="sns" value="${esc(st.sns)}" placeholder="例）Instagram：@miraiway"></div>
+    <div><div class="h2">署名のプレビュー</div><div class="mail" style="max-height:none">${esc(st.preview)}</div></div>
+    <span class="note">氏名を変えるときは、管理者が members シートで直します</span>
+  </main><div class="foot"><button class="btn" id="go">保存する</button></div>`);
+  $('#go').onclick = async () => {
+    $('#go').disabled = true;
+    try { await run('api_saveSettings', { romaji: $('#ro').value, phone: $('#ph').value, web: $('#web').value, sns: $('#sns').value }); toast('保存しました。未送信のメールの署名も更新しました'); settings(); }
+    catch (e) { fail(e); $('#go').disabled = false; }
+  };
+}
+
+// ───── イベント作成 ─────
+function newEvent() {
+  const f = { members: [S.me], heat: 'A', slack: true, sokuho: false, slackReport: true };
+  window.F = f;
+  const d = new Date(); const iso = new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+  view(head('イベント作成', '', 'home()') + `<main>
+    <span class="reqnote"><b>＊</b> は必須</span>
+    <div><label for="n" class="req">イベント名</label><input id="n" required aria-required="true" placeholder="外国人雇用セミナー2026"></div>
+    <div class="row"><div><label for="d" class="req">日付</label><input id="d" type="date" value="${iso}"></div><div><label for="fee">参加費</label><input id="fee" placeholder="0円"></div></div>
+    <div><span class="lab">参加メンバー</span><div class="pills">${S.members.map(m => `<button type="button" class="pill ${m === S.me ? 'on' : ''}" onclick="F.members=F.members.includes(this.textContent)?F.members.filter(x=>x!==this.textContent):[...F.members,this.textContent];this.classList.toggle('on')">${esc(m)}</button>`).join('')}</div></div>
+    <div><span class="lab">熱さ</span><div class="seg">${['S','A','B'].map(h => `<button type="button" class="${h === 'A' ? 'on' : ''}" onclick="F.heat='${h}';[...this.parentNode.children].forEach(b=>b.classList.toggle('on',b===this))">${h}</button>`).join('')}</div></div>
+    <div><label for="tg">狙いの企業・団体（任意）</label><input id="tg" placeholder="社名をカンマ区切りで"></div>
+    <div><label for="url">イベントページ（任意）</label><input id="url" type="url" placeholder="https://"></div>
+    <div><span class="lab">このイベントで使う機能</span>
+      <label class="sw">Slackに親投稿する<input type="checkbox" checked onchange="F.slack=this.checked"></label>
+      <label class="sw">速報を出す<input type="checkbox" onchange="F.sokuho=this.checked"></label>
+      <label class="sw">終了報告をSlackにも投稿する<input type="checkbox" checked onchange="F.slackReport=this.checked"></label></div>
+  </main><div class="foot"><button class="btn" id="go">作成する</button><span class="note">Driveのフォルダは、承認が終わったあと自動で作ります</span></div>`);
+  $('#go').onclick = async () => {
+    $('#go').disabled = true;
+    try {
+      const ev = await run('api_createEvent', Object.assign(F, { name: $('#n').value.trim(), date: $('#d').value, fee: $('#fee').value, targets: $('#tg').value, url: $('#url').value.trim() }));
+      openEvent(ev.id);
+    } catch (e) { fail(e); $('#go').disabled = false; }
+  };
+}
+
+// ───── イベント（名刺・写真・会場メモ） ─────
+async function openEvent(id) {
+  view('<main><p class="note">読み込み中…</p></main>');
+  try { Object.assign(S, await run('api_getEvent', id)); } catch (e) { return oops(e, `openEvent('${id}')`); }
+  renderEvent();
+}
+function renderEvent() {
+  const ev = S.ev, cards = S.contacts, id = ev.id;
+  const drafts = cards.filter(c => c.status === 'draft').length;
+  view(head(ev.name, jpDate(ev.date), 'home()') + `<main>
+    ${steps(ev, cards)}
+    <div class="h2"><span>名刺・写真</span><span>名刺 ${cards.length}・写真 ${ev.photos}</span></div>
+    <label class="drop" for="up" id="dropt">＋ 名刺と写真をまとめて選ぶ<br>（区別しなくてOK）</label>
+    <input id="up" type="file" accept="image/*,.heic,.heif" multiple style="display:none">
+    <div id="prog"></div>
+    ${cards.map(c => `<div class="line"><span>${esc(c.company || '社名未読取')} ${esc(c.name)}</span><span class="tag">${STATUS[c.status]}</span></div>`).join('')}
+    <div class="h2">会場メモ</div>
+    ${ev.memos.map((m, j) => `<div class="mrow"><button class="mdel" onclick="delMemo(${j})">削除</button><div class="memo" data-j="${j}"><span>${esc(m.t)}</span><div>${esc(m.text)}</div></div></div>`).join('')}
+    <div class="add"><input id="memo" placeholder="メモを追加（キーボードのマイクで話せます）"><button id="addm">追加</button></div>
+  </main><div class="foot">
+    ${cards.some(c => c.status !== 'draft') ? `<button class="btn2" onclick="done()">送信予約を見る</button>` : ''}
+    <span class="note">${drafts ? `未承認 ${drafts}人。会場メモ ${ev.memos.length}件をもとに、残りを話して仕上げます` : '名刺を取り込むと次に進めます'}</span>
+    <button class="btn" ${drafts ? '' : 'disabled'} onclick="talk()">まとめて話して仕上げる</button></div>`);
+  // 左にスワイプで「削除」ボタンを出す（スワイプだけでは消えない）
+  document.querySelectorAll('.memo[data-j]').forEach(row => {
+    let x0 = null, dx = 0;
+    row.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; dx = 0; row.style.transition = 'none'; }, { passive: true });
+    row.addEventListener('touchmove', e => { if (x0 == null) return; dx = Math.min(0, e.touches[0].clientX - x0); row.style.transform = `translateX(${Math.max(dx, -96)}px)`; }, { passive: true });
+    row.addEventListener('touchend', () => { row.style.transition = ''; x0 = null; row.style.transform = dx < -48 ? 'translateX(-80px)' : ''; });
+  });
+  $('#addm').onclick = async () => {
+    const t = $('#memo').value.trim(); if (!t) return;
+    $('#addm').disabled = true;
+    try { S.ev.memos = await run('api_addMemo', id, t); renderEvent(); } catch (e) { fail(e); $('#addm').disabled = false; }
+  };
+  $('#up').onchange = async e => {
+    const files = [...e.target.files]; if (!files.length) return;
+    $('#dropt').textContent = `${files.length}枚を取り込み中…（画面を閉じないでください）`;
+    $('#prog').innerHTML = files.map((f, j) => `<div class="up"><img src="${URL.createObjectURL(f)}" alt=""><span id="st${j}">待機中</span></div>`).join('');
+    let cardsN = 0, photoN = 0, ng = 0, next = 0;
+    const one = async j => {
+      $('#st' + j).textContent = '読み取り中…';
+      try {
+        const img = await toB64(files[j]);
+        const r = await run('api_upload', id, img.b64, img.mime);
+        if (r.type === 'photo') { photoN++; $('#st' + j).textContent = '✓ 会場写真'; }
+        else { cardsN++; $('#st' + j).textContent = `✓ 名刺：${r.company || '社名未読取'} ${r.name || ''}`; }
+      } catch (err) { ng++; $('#st' + j).textContent = '× 失敗：' + (err.message || err); }
+    };
+    // 3枚ずつ同時に送る（AI無料枠の回数制限に当たりにくい数）
+    await Promise.all([0, 1, 2].map(async () => { while (next < files.length) await one(next++); }));
+    toast(`名刺 ${cardsN}枚・写真 ${photoN}枚を保存しました${ng ? `（失敗 ${ng}枚）` : ''}`, 4000);
+    setTimeout(() => openEvent(id), 1200);
+  };
+}
+
+// オンにした機能だけを上から順に並べる
+function steps(ev, cards) {
+  const st = [];
+  if (ev.slack) st.push(ev.slackTs ? ['Slack親投稿', '投稿済み', ''] : ['Slack親投稿', '内容を確認して投稿', 'parent()']);
+  if (ev.sokuho) st.push(ev.sokuho.by ? ['速報', `${esc(ev.sokuho.by)}さんが投稿済み`, ''] : ['速報', ev.slackTs ? '写真と選択式で投稿' : '親投稿のあとで出せます', ev.slackTs ? 'sokuho()' : '']);
+  const rep = (ev.reports || {})[S.me];
+  st.push(['終了報告', rep ? '提出済み（直せます）' : cards.some(c => c.status === 'draft') ? 'メールの承認が終わったら' : '数字は自動。所感を話すだけ', 'report()']);
+  return `<div class="h2">ステップ</div>` + st.map(([t, d, fn]) => fn
+    ? `<button class="item" onclick="${fn}">${t}<small>${d}</small></button>`
+    : `<div class="item" style="color:var(--sub)">${t}<small>${d}</small></div>`).join('');
+}
+
+// ───── Slack親投稿 ─────
+async function parent() {
+  const ev = S.ev;
+  view('<main><p class="note">読み込み中…</p></main>');
+  let text; try { text = await run('api_parentPreview', ev.id); } catch (e) { fail(e); return openEvent(ev.id); }
+  view(head('Slack親投稿', '#mw-biz-event', `openEvent('${ev.id}')`) + `<main>
+    <span class="note" style="text-align:left">この内容でスレッドを立てます。Driveフォルダのリンクは、フォルダができた時点で自動で書き足します</span>
+    <div class="mail" style="max-height:none;border:1px solid var(--line);border-radius:14px;padding:14px">${esc(text)}</div>
+  </main><div class="foot"><button class="btn" id="go">承認して投稿</button></div>`);
+  $('#go').onclick = async () => {
+    $('#go').disabled = true;
+    try { await run('api_postParent', ev.id); toast('Slackに投稿しました'); openEvent(ev.id); } catch (e) { fail(e); $('#go').disabled = false; }
+  };
+}
+
+// ───── 速報 ─────
+function sokuho() {
+  const ev = S.ev; window.SK = { layers: [] }; window.SKP = [];
+  const one = (key, opts) => `<div class="seg" style="grid-template-columns:repeat(${opts.length},1fr)">${opts.map(o => `<button type="button" onclick="SK.${key}='${o}';[...this.parentNode.children].forEach(b=>b.classList.toggle('on',b===this))">${o}</button>`).join('')}</div>`;
+  view(head('速報', ev.name, `openEvent('${ev.id}')`) + `<main>
+    <div><span class="lab">写真（2〜3枚）</span><label class="drop" for="skp" id="skpt" style="height:64px">＋ 写真を選ぶ</label><input id="skp" type="file" accept="image/*,.heic,.heif" multiple style="display:none"><div id="skprev" class="pills"></div></div>
+    <span class="reqnote"><b>＊</b> は必須</span>
+    <div><span class="lab req">来場者数</span>${one('size', ['少（〜30人）', '中（30〜100人）', '多（100人〜）'])}</div>
+    <div><span class="lab req">来場者層（複数可）</span><div class="pills">${['経営者', '人事・採用', '現場・営業', '行政・支援機関', '学生', 'その他'].map(o => `<button type="button" class="pill" onclick="SK.layers=SK.layers.includes('${o}')?SK.layers.filter(x=>x!=='${o}'):[...SK.layers,'${o}'];this.classList.toggle('on')">${o}</button>`).join('')}</div></div>
+    <div><span class="lab req">所感</span>${one('feel', ['◎', '○', '△'])}</div>
+    <div><label for="why">理由（話してOK）</label><textarea id="why" style="min-height:90px" placeholder="狙いの相手はいるか／話しかけやすいか／MiraiWayに関わる出展者・登壇者はいるか"></textarea></div>
+    <div><span class="lab req">追加で人を送る価値</span>${one('more', ['あり', 'なし'])}</div>
+  </main><div class="foot"><button class="btn" id="go">承認して投稿</button></div>`);
+  $('#skp').onchange = async e => {
+    const fs = [...e.target.files].slice(0, 3);
+    $('#skpt').textContent = '準備中…';
+    window.SKP = await Promise.all(fs.map(toB64));
+    $('#skprev').innerHTML = fs.map(f => `<img src="${URL.createObjectURL(f)}" alt="" style="width:72px;height:52px;object-fit:cover;border-radius:8px">`).join('');
+    $('#skpt').textContent = `${fs.length}枚選択中（選び直す）`;
+  };
+  $('#go').onclick = async () => {
+    $('#go').disabled = true; $('#go').textContent = '投稿中…';
+    try { await run('api_sokuho', ev.id, Object.assign(SK, { why: $('#why').value.trim() }), SKP); toast('速報を投稿しました'); openEvent(ev.id); }
+    catch (e) { fail(e); $('#go').disabled = false; $('#go').textContent = '承認して投稿'; }
+  };
+}
+
+// ───── 終了報告 ─────
+async function report() {
+  const ev = S.ev;
+  view('<main><p class="note">集計中…</p></main>');
+  let r; try { r = await run('api_reportDraft', ev.id); } catch (e) { fail(e); return openEvent(ev.id); }
+  const d = r.draft, sv = r.saved || {};
+  window.R = { match: sv.match, again: sv.again, fare: sv.fare, hot: d.hot.map(h => Object.assign({}, h, (sv.hot || []).find(x => x.id === h.id) || {})) };
+  const one = (key, opts) => `<div class="seg" style="grid-template-columns:repeat(${opts.length},1fr)">${opts.map(o => `<button type="button" class="${String(R[key]) === String(o) ? 'on' : ''}" onclick="R.${key}=${typeof o === 'number' ? o : `'${o}'`};[...this.parentNode.children].forEach(b=>b.classList.toggle('on',b===this))">${o}</button>`).join('')}</div>`;
+  view(head('終了報告', ev.name, `openEvent('${ev.id}')`) + `<main>
+    <div><div class="h2">数字（記録から自動）</div>
+      <div class="line"><span>名刺交換</span><span>${d.cards}枚</span></div>
+      <div class="line"><span>ターゲット該当</span><span>${d.target}枚</span></div>
+      <div class="line"><span>深く話せた</span><span>${d.deep}社</span></div>
+      <div class="line"><span>持ち帰るもの（熱さ${esc(ev.heat)}）</span><span><b>${d.judge}</b></span></div></div>
+    <span class="reqnote"><b>＊</b> は必須</span>
+    <div><span class="lab req">来場者層の一致度</span>${one('match', [1, 2, 3, 4, 5])}</div>
+    <div><div class="h2">熱い企業（最大3社・自動）</div>
+      ${d.hot.map((h, j) => `<div style="border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:8px;display:flex;flex-direction:column;gap:8px">
+        <b style="font-size:14px">${esc(h.company)} ${esc(h.name)}</b><span class="note" style="text-align:left">次にやること：${esc(h.next)}</span>
+        <label class="lab req" style="margin:0">熱い理由（一言）</label><input aria-label="熱い理由（一言）" aria-required="true" placeholder="例：採用に困っている" value="${esc(R.hot[j].hot)}" oninput="R.hot[${j}].hot=this.value">
+        <label class="lab req" style="margin:0">期限</label><input type="date" value="${esc(R.hot[j].due)}" oninput="R.hot[${j}].due=this.value" aria-label="期限" aria-required="true"></div>`).join('') || '<p class="note">次にやることがある相手はいません</p>'}</div>
+    <div><label for="notes">所感・特筆事項（キーボードのマイクで話してOK。AIが箇条書きに整えます）</label><textarea id="notes" placeholder="なければ空のまま">${esc(sv.notes || '')}</textarea></div>
+    ${d.judge !== '達成' ? `<div><label for="why" class="req">持ち帰るものが${d.judge}の理由（1行）</label><input id="why" value="${esc(sv.why || '')}"></div>` : ''}
+    <div><span class="lab req">次回も出るべきか</span>${one('again', ['はい', 'いいえ'])}</div>
+    <div><label for="ho">配布物（なければ空）</label><input id="ho" value="${esc(sv.handout || '')}" placeholder="例：人材事業パンフ 20部"></div>
+    <div><span class="lab req">交通費のfreee申請</span>${one('fare', ['済', '未'])}</div>
+    <span class="note">Drive格納：${d.filed ? '済' : '未（承認が終わると自動で整理されます）'}</span>
+  </main><div class="foot"><button class="btn" id="go">確認する</button></div>`);
+  $('#go').onclick = async () => {
+    $('#go').disabled = true; $('#go').textContent = '整えています…';
+    try {
+      Object.assign(R, { notes: $('#notes').value, why: $('#why') ? $('#why').value.trim() : '', handout: $('#ho').value.trim() });
+      const p = await run('api_reportPreview', ev.id, R);
+      R.notes = p.notes;
+      reportConfirm(p.text);
+    } catch (e) { fail(e); $('#go').disabled = false; $('#go').textContent = '確認する'; }
+  };
+}
+function reportConfirm(text) {
+  const ev = S.ev;
+  view(head('終了報告の確認', ev.name, 'report()') + `<main>
+    <div class="mail" style="max-height:none;border:1px solid var(--line);border-radius:14px;padding:14px">${esc(text)}</div>
+    <span class="note">${ev.slackReport && ev.slackTs ? 'Slackのスレッドに投稿し、ツールにも記録します' : 'ツールに記録します（Slackには投稿しません）'}</span>
+  </main><div class="foot"><button class="btn" id="go">承認して提出</button></div>`);
+  $('#go').onclick = async () => {
+    $('#go').disabled = true;
+    try { const r = await run('api_submitReport', ev.id, R); toast(r.posted ? '終了報告をSlackに投稿しました' : '終了報告を記録しました'); openEvent(ev.id); }
+    catch (e) { fail(e); $('#go').disabled = false; }
+  };
+}
+
+async function delMemo(j) {
+  try { S.ev.memos = await run('api_deleteMemo', S.ev.id, S.ev.memos[j]); toast('メモを削除しました'); renderEvent(); }
+  catch (e) { fail(e); }
+}
+
+// 送る前に縮小（長辺1280px）して通信量とAIの負担を減らす
+async function toB64(file) {
+  try {
+    const img = await createImageBitmap(file);
+    const r = Math.min(1, 1280 / Math.max(img.width, img.height));
+    const c = document.createElement('canvas'); c.width = img.width * r; c.height = img.height * r;
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return { b64: c.toDataURL('image/jpeg', 0.8).split(',')[1], mime: 'image/jpeg' };
+  } catch (e) {
+    // このブラウザで開けない形式（HEICなど）はそのまま送る。AIもDriveもHEICを扱える
+    if (file.size > 15e6) throw new Error('画像が大きすぎます（15MBまで）');
+    const b64 = await new Promise((ok, ng) => { const fr = new FileReader(); fr.onload = () => ok(fr.result.split(',')[1]); fr.onerror = ng; fr.readAsDataURL(file); });
+    const heic = /\.hei[cf]$/i.test(file.name) || /hei[cf]/.test(file.type);
+    return { b64, mime: heic ? 'image/heic' : (file.type || 'image/jpeg') };
+  }
+}
+
+// ───── まとめて話す ─────
+function talk() {
+  const ev = S.ev, mine = S.contacts.filter(c => c.status === 'draft');
+  view(head('まとめて話す', ev.name, `openEvent('${ev.id}')`) + `<main>
+    <span class="note" style="text-align:left">名刺を見ながら、社名か名字から話してください。キーボードのマイクで話せます</span>
+    <div class="chips">${mine.map(c => `<span class="chip">${esc(c.company)} ${esc((c.name || '').split(' ')[0])}</span>`).join('')}</div>
+    <textarea id="talk" style="min-height:260px" placeholder="例）ABCの山田さんは外国人採用に困っていて、来週までに資料を送る約束をした。DEFの佐藤さんは挨拶だけ。">${esc((ev.talk || {})[S.me] || '')}</textarea>
+    <span class="note">会場メモ ${ev.memos.length}件も一緒に使います</span>
+  </main><div class="foot"><button class="btn" id="go">振り分ける</button></div>`);
+  $('#go').onclick = async () => {
+    $('#go').disabled = true; $('#go').textContent = 'AIが振り分け中…';
+    try { Object.assign(S, await run('api_assign', ev.id, $('#talk').value)); swipe(); }
+    catch (e) { fail(e); $('#go').disabled = false; $('#go').textContent = '振り分ける'; }
+  };
+}
+
+// ───── スワイプで承認 ─────
+function swipe() {
+  const ev = S.ev, all = S.contacts, q = all.filter(c => c.status === 'draft');
+  if (!q.length) return done();
+  const c = q[0], i = all.length - q.length + 1;
+  const sched = needsSched(c) ? `<div><span class="lab">日程</span><div class="seg2">
+      <button class="${c.schedMode !== 'ask' ? 'on' : ''}" onclick="setSched('dates')">候補日を送る</button>
+      <button class="${c.schedMode === 'ask' ? 'on' : ''}" onclick="setSched('ask')">日程を聞く</button></div>
+      ${c.schedMode !== 'ask' ? [0,1,2].map(j => `<input type="datetime-local" style="margin-top:8px" data-j="${j}" value="${esc((c.dtRaw || [])[j] || '')}" onchange="setDate()">`).join('') : ''}</div>` : '';
+  view(head('確認と承認', `${i}/${all.length}`, `openEvent('${ev.id}')`) + `
+    <div style="height:3px;background:#EEE"><div style="width:${(i - 1) / all.length * 100}%;height:3px;background:#191919"></div></div>
+    <div class="deck"><article class="card" id="card">
+      <div><div class="co">${esc(c.company)}${c.dept ? '・' + esc(c.dept) : ''}${c.title ? '・' + esc(c.title) : ''}</div><div class="nm">${esc(c.name || '（氏名未読取）')} 様</div></div>
+      <div class="tags"><span class="tag k">${esc(SCENE[c.scene])}${c.block ? '・' + esc((BLOCKS[c.scene] || {})[c.block] || '') : ''}</span>
+        ${c.biz && c.biz !== 'なし' ? `<span class="tag">${esc(c.biz)}事業</span>` : ''}${c.deep ? '<span class="tag">深く話せた</span>' : ''}${(c.reunion || []).length ? '<span class="tag">再会</span>' : ''}</div>
+      ${c.note ? `<p style="margin:0;font-size:14px;line-height:1.7;color:#374151">${esc(c.note)}</p>` : ''}
+      ${c.next && c.next !== 'なし' ? `<div class="kv"><span>次にやること</span><span>${esc(c.next)}${c.due ? '・' + esc(c.due) + 'まで' : ''}</span></div>` : ''}
+      ${sched}
+      <div><span class="lab">メール（宛先 ${esc(c.email || '未読取')}・${sendDay()} 6:30 送信）</span><div class="mail">件名：${esc(c.subject)}\n\n${esc(c.body)}</div></div>
+      ${c.reason ? `<div class="reason">AIの判断：${esc(c.reason)}</div>` : ''}
+      ${/〇/.test(c.subject + c.body) ? '<div class="err">「〇〇」が残っています。「全文を見る・直す」で埋めてください</div>' : ''}
+      <button class="btn2" onclick="edit()">全文を見る・直す</button>
+    </article></div>
+    <div class="foot" style="border:0;background:#FAFAFA"><div class="acts">
+      <button class="round" aria-label="直す" onclick="edit()">✎</button>
+      <button class="round ok" aria-label="承認" onclick="approve()">✓</button></div>
+      <span class="note">← 直す　　右にスワイプで承認 →</span></div>`);
+  window.C = c;
+  // 横にはっきり動かしたときだけスワイプとみなす（縦スクロール中の誤承認を防ぐ）。入力欄の上では反応しない
+  const card = $('#card'); let x0 = null, y0 = 0, dx = 0, dy = 0;
+  card.addEventListener('touchstart', e => { if (e.target.closest('input,textarea,select,button')) return; x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = dy = 0; card.style.transition = 'none'; }, { passive: true });
+  card.addEventListener('touchmove', e => { if (x0 == null) return; dx = e.touches[0].clientX - x0; dy = e.touches[0].clientY - y0; if (Math.abs(dx) > Math.abs(dy)) card.style.transform = `translateX(${dx}px) rotate(${dx / 30}deg)`; }, { passive: true });
+  card.addEventListener('touchend', () => {
+    if (x0 == null) return;
+    card.style.transition = ''; x0 = null;
+    const sideways = Math.abs(dx) > 2 * Math.abs(dy);
+    if (sideways && dx > 110) approve(); else if (sideways && dx < -110) { card.style.transform = ''; edit(); } else card.style.transform = '';
+  });
+}
+
+async function saveC(patch) {
+  try {
+    const c = await run('api_updateContact', Object.assign({ id: C.id }, patch));
+    S.contacts = S.contacts.map(x => x.id === c.id ? c : x);
+  } catch (e) { fail(e); }
+}
+async function setSched(m) { await saveC({ schedMode: m }); swipe(); }
+async function setDate() {
+  const raw = [...document.querySelectorAll('[data-j]')].map(i => i.value);
+  const fmt = v => { const d = new Date(v), e = new Date(d.getTime() + 30 * 6e4), hm = x => `${x.getHours()}:${String(x.getMinutes()).padStart(2, '0')}`;
+    return `${d.getMonth() + 1}月${d.getDate()}日（${'日月火水木金土'[d.getDay()]}）${hm(d)}〜${hm(e)}`; };
+  await saveC({ dates: raw.filter(Boolean).map(fmt), dtRaw: raw });
+  swipe();
+}
+
+const PEND = [];
+async function approve() {
+  const c = C, card = $('#card');
+  const err = !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c.email || '') ? 'メールアドレスを確認してください'
+    : /〇/.test(c.subject + c.body) ? '「〇〇」が残っています。直してから承認してください' : '';
+  if (err) { if (card) card.style.transform = ''; return fail(new Error(err)); }
+  c.status = 'approved';
+  const p = run('api_approve', c.id).catch(e => { c.status = 'draft'; fail(e); if ($('#card') || $('.big')) swipe(); });
+  PEND.push(p);
+  if (card) { card.style.transform = 'translateX(120%) rotate(12deg)'; await new Promise(r => setTimeout(r, 160)); }
+  swipe();
+}
+
+// ───── 直す ─────
+function edit() {
+  const c = C, sc = Object.keys(SCENE), bl = BLOCKS[c.scene] || {};
+  view(head('直す', c.company + ' ' + c.name, 'swipe()') + `<main>
+    <div class="row"><div><label for="sc">シーン</label><select id="sc">${sc.map(s => `<option value="${s}" ${s === c.scene ? 'selected' : ''}>${SCENE[s]}</option>`).join('')}</select></div>
+      <div><label for="bl">ブロック</label><select id="bl" ${Object.keys(bl).length ? '' : 'disabled'}><option value="">—</option>${Object.entries(bl).map(([k, v]) => `<option value="${k}" ${k === c.block ? 'selected' : ''}>${v}</option>`).join('')}</select></div></div>
+    <div class="row"><div><label for="co">社名</label><input id="co" value="${esc(c.company)}"></div><div><label for="nm">氏名</label><input id="nm" value="${esc(c.name)}"></div></div>
+    <div class="row"><div><label for="dp">部署</label><input id="dp" value="${esc(c.dept)}"></div><div><label for="ti">役職</label><input id="ti" value="${esc(c.title)}"></div></div>
+    <div><label for="em" class="req">メールアドレス</label><input id="em" type="email" value="${esc(c.email)}"></div>
+    <div><label for="sj">件名</label><input id="sj" value="${esc(c.subject)}"></div>
+    <div><label for="bd">本文（直接直すと、以後は自動で組み直しません）</label><textarea id="bd" style="min-height:420px">${esc(c.body)}</textarea></div>
+  </main><div class="foot"><button class="btn" id="sv">保存してカードに戻る</button></div>`);
+  let touched = !!c.edited;
+  $('#sj').oninput = $('#bd').oninput = () => touched = true;
+  $('#sc').onchange = () => { C.scene = $('#sc').value; C.block = ''; saveFields(false).then(edit); };
+  $('#bl').onchange = () => { C.block = $('#bl').value; saveFields(false).then(edit); };
+  $('#sv').onclick = () => saveFields(touched).then(swipe);
+}
+function saveFields(edited) {
+  return saveC({ scene: C.scene, block: C.block, company: $('#co').value, name: $('#nm').value, dept: $('#dp').value, title: $('#ti').value,
+    email: $('#em').value.trim(), subject: $('#sj').value, body: $('#bd').value, edited })
+    .then(() => { C = S.contacts.find(x => x.id === C.id); });
+}
+
+// ───── 送信予約の完了 ─────
+function done() {
+  const ev = S.ev, ap = S.contacts.filter(c => c.status === 'approved'), sent = S.contacts.filter(c => c.status === 'sent');
+  if (PEND.length) Promise.allSettled(PEND.splice(0)).then(() => run('api_organizeSoon').catch(() => {}));
+  const by = {}; ap.forEach(c => by[c.scene] = (by[c.scene] || 0) + 1);
+  view(head(ev.name, '', `openEvent('${ev.id}')`) + `<main>
+    <div><span class="note" style="text-align:left;display:block">${sendDay()} 6:30 に送信します</span>
+      <p style="margin:4px 0"><span class="big">${ap.length}</span> <b>件のメールを予約しました</b></p>
+      <span class="note" style="text-align:left;display:block">送信前ならいつでも取り消し・修正できます</span></div>
+    <div><div class="h2">内訳</div>${Object.keys(by).sort().map(s => `<div class="line"><span>${SCENE[s]}</span><span>${by[s]}</span></div>`).join('')}</div>
+    <div><div class="h2">予約中</div>${ap.map(c => `<div class="line"><span>${esc(c.company)} ${esc(c.name)}</span><button onclick="cancelC('${c.id}')">取り消して直す</button></div>`).join('')}</div>
+    ${sent.length ? `<span class="note">送信済み ${sent.length}件</span>` : ''}
+    <span class="note">名刺 ${S.contacts.length}枚・写真 ${ev.photos}枚は、まもなく Drive のイベントフォルダに整理されます</span>
+  </main><div class="foot"><button class="btn" onclick="report()">終了報告を仕上げる</button><button class="btn2" onclick="home()">ホームへ</button></div>`);
+}
+async function cancelC(id) {
+  try { await run('api_cancel', id); S.contacts.find(c => c.id === id).status = 'draft'; swipe(); } catch (e) { fail(e); }
+}
+
+home();
+</script>
+</body>
+</html>
