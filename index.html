@@ -92,6 +92,7 @@ select{background-image:linear-gradient(45deg,transparent 50%,var(--sub) 50%),li
 .round{width:64px;height:64px;border-radius:32px;border:1px solid var(--line);background:#fff;font-size:22px}
 .round.ok{background:var(--btn);color:#fff;border:0}
 .big{font-size:48px;font-weight:700}
+.th{width:44px;height:30px;object-fit:cover;border-radius:6px;border:1px solid var(--line);flex:none;background:#F3F4F6}.crow{background:#fff;position:relative;transition:transform .2s;touch-action:pan-y;cursor:pointer}.crow .cn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cardimg{width:100%;max-height:260px;object-fit:contain;border-radius:12px;border:1px solid var(--line);background:#F9FAFB}
 .line{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #F0F0F0;font-size:14px;gap:8px}
 .line>:first-child{min-width:0;overflow-wrap:anywhere}.line>:last-child:not(:first-child){flex:none}
 .line button{height:36px;border-radius:999px;border:1px solid var(--line);background:#fff;padding:0 12px;font-size:12px}
@@ -379,7 +380,7 @@ function renderEvent(keepScroll = false) {
     <label class="drop" for="up" id="dropt">＋ 名刺と写真をまとめて選ぶ<br>（区別しなくてOK）</label>
     <input id="up" type="file" accept="image/*,.heic,.heif" multiple style="display:none">
     <div id="prog"></div>
-    ${cards.map(c => `<div class="line"><span>${esc(c.company || '社名未読取')} ${esc(c.name)}</span><span class="tag">${STATUS[c.status]}</span></div>`).join('')}
+    ${cards.map(c => `<div class="mrow"><button class="mdel" onclick="delCard('${c.id}')">削除</button><div class="line crow" data-c="${c.id}" onclick="openCard('${c.id}')">${thumb(c, 'th')}<span class="cn">${esc(c.company || '社名未読取')} ${esc(c.name)}</span><span class="tag">${STATUS[c.status]}</span></div></div>`).join('')}
     ${cards.some(c => c.status !== 'draft') ? `<button class="btn2" onclick="done()">送信予約を見る</button>` : ''}
     <div class="h2">会場メモ</div>
     ${ev.memos.map((m, j) => `<div class="mrow"><button class="mdel" onclick="delMemo(${j})">削除</button><div class="memo" data-j="${j}"><span>${esc(m.t)}</span><div>${esc(m.text)}</div></div></div>`).join('')}
@@ -388,7 +389,7 @@ function renderEvent(keepScroll = false) {
     <span class="note">${drafts ? `未承認 ${drafts}人。会場メモ ${ev.memos.length}件をもとに、残りを話して仕上げます` : '名刺を取り込むと次に進めます'}</span>
     <button class="btn" ${drafts ? '' : 'disabled'} onclick="talk()">まとめて話して仕上げる</button></div>`, false, keepScroll);
   // 左にスワイプで「削除」ボタンを出す（スワイプだけでは消えない）
-  document.querySelectorAll('.memo[data-j]').forEach(row => {
+  document.querySelectorAll('.memo[data-j], .crow').forEach(row => {
     let x0 = null, dx = 0;
     row.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; dx = 0; row.style.transition = 'none'; }, { passive: true });
     row.addEventListener('touchmove', e => { if (x0 == null) return; dx = Math.min(0, e.touches[0].clientX - x0); row.style.transform = `translateX(${Math.max(dx, -96)}px)`; }, { passive: true });
@@ -531,6 +532,29 @@ function reportConfirm(text) {
   };
 }
 
+// 名刺の画像（Cloudflareから直接読む。ブラウザが覚えるので2回目からは一瞬）
+const thumb = (c, cls) => c.fileKey ? `<img class="${cls}" loading="lazy" alt="名刺" src="${API_URL}?img=${encodeURIComponent(c.fileKey)}&k=${K}">` : `<span class="${cls}"></span>`;
+function openCard(id) {
+  const row = document.querySelector(`.crow[data-c="${id}"]`);
+  if (row && row.style.transform) { row.style.transform = ''; return; } // 削除ボタンが出ているときは閉じるだけ
+  C = S.contacts.find(x => x.id === id);
+  if (C.status === 'sent') return toast('送信済みのため直せません');
+  BACK = () => renderEvent(true); edit();
+}
+function delCard(id) {
+  const c = S.contacts.find(x => x.id === id);
+  if (c.status === 'sent') return toast('送信済みのため削除できません');
+  if (!confirm(`${c.company || '社名未読取'} ${c.name || ''} の名刺を削除しますか？`)) return renderEvent(true);
+  const before = S.contacts.slice();
+  S.contacts = S.contacts.filter(x => x !== c); cacheEv(); renderEvent(true); toast('名刺を削除しました');
+  bg(run('api_deleteContact', id), () => { S.contacts = before; renderEvent(true); });
+}
+async function reread() {
+  $('#rr').disabled = true; $('#rr').textContent = 'AIが読み取り中…';
+  try { await saveFields(false); const c = await run('api_reread', C.id); Object.assign(C, c); cacheEv(); edit(); toast('読み取り直しました'); }
+  catch (e) { fail(e); $('#rr').disabled = false; $('#rr').textContent = 'AIでもう一度読み取る'; }
+}
+
 function delMemo(j) {
   const id = S.ev.id, before = S.ev.memos.slice(), m = before[j];
   S.ev.memos.splice(j, 1); cacheEv(); renderEvent(true); toast('メモを削除しました');
@@ -573,6 +597,7 @@ function talk() {
 
 // ───── スワイプで承認 ─────
 function swipe() {
+  BACK = swipe;
   const ev = S.ev, all = S.contacts, q = all.filter(c => c.status === 'draft');
   if (!q.length) return done();
   const c = q[0], i = all.length - q.length + 1;
@@ -640,9 +665,11 @@ async function approve() {
 }
 
 // ───── 直す ─────
+let BACK = swipe; // 「直す」から戻る先（承認カード or イベント画面）
 function edit() {
   const c = C, sc = Object.keys(SCENE), bl = BLOCKS[c.scene] || {};
-  view(head('直す', c.company + ' ' + c.name, 'swipe()') + `<main>
+  view(head('直す', c.company + ' ' + c.name, 'BACK()') + `<main>
+    ${c.fileKey ? `${thumb(c, 'cardimg')}<button class="btn2" id="rr" onclick="reread()">AIでもう一度読み取る</button>` : ''}
     <div class="row"><div><label for="sc">シーン</label><select id="sc">${sc.map(s => `<option value="${s}" ${s === c.scene ? 'selected' : ''}>${SCENE[s]}</option>`).join('')}</select></div>
       <div><label for="bl">ブロック</label><select id="bl" ${Object.keys(bl).length ? '' : 'disabled'}><option value="">—</option>${Object.entries(bl).map(([k, v]) => `<option value="${k}" ${k === c.block ? 'selected' : ''}>${v}</option>`).join('')}</select></div></div>
     <div><label for="co">社名</label><input id="co" value="${esc(c.company)}"></div>
@@ -651,12 +678,12 @@ function edit() {
     <div><label for="em" class="req">メールアドレス</label><input id="em" type="email" value="${esc(c.email)}"></div>
     <div><label for="sj">件名</label><input id="sj" value="${esc(c.subject)}"></div>
     <div><label for="bd">本文（直接直すと、以後は自動で組み直しません）</label><textarea id="bd" style="min-height:420px">${esc(c.body)}</textarea></div>
-  </main><div class="foot"><button class="btn" id="sv">保存してカードに戻る</button></div>`);
+  </main><div class="foot"><button class="btn" id="sv">保存して戻る</button></div>`);
   let touched = !!c.edited;
   $('#sj').oninput = $('#bd').oninput = () => touched = true;
   $('#sc').onchange = () => { C.scene = $('#sc').value; C.block = ''; saveFields(false).then(edit); };
   $('#bl').onchange = () => { C.block = $('#bl').value; saveFields(false).then(edit); };
-  $('#sv').onclick = () => saveFields(touched).then(swipe);
+  $('#sv').onclick = () => saveFields(touched).then(() => BACK());
 }
 function saveFields(edited) {
   return saveC({ scene: C.scene, block: C.block, company: $('#co').value, name: $('#nm').value, dept: $('#dp').value, title: $('#ti').value,
