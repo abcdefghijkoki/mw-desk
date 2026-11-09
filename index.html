@@ -99,7 +99,8 @@ select{background-image:linear-gradient(45deg,transparent 50%,var(--sub) 50%),li
 #sync{position:fixed;top:10px;right:10px;background:#F3F4F6;color:#4B5563;font-size:12px;padding:4px 10px;border-radius:999px;z-index:9;display:none}
 #toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:#191919;color:#fff;padding:10px 16px;border-radius:14px;font-size:14px;display:none;max-width:90%;z-index:9}
 .err{color:#B42318;font-size:12px}
-.stat{border:1px solid var(--line);border-radius:18px;padding:14px 16px;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}.stat span{width:100%;font-size:12px;color:var(--sub)}.stat b{font-size:28px}.stat small{font-size:13px;color:var(--sub)}
+.stat.hot{border-color:#191919}.todo{background:#FFF7E6;border:1.5px solid #F5B54A;border-radius:18px;padding:14px 16px;scroll-margin-top:80px}.todo h3{margin:0 0 6px;font-size:16px;display:flex;align-items:baseline;gap:8px}.todo h3 small{font-size:12px;color:#92400E;font-weight:400}.titem{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #F7D9A8}.titem:first-of-type{border-top:0}.titem .due{flex:none;font-size:12px;font-weight:700;color:#92400E;background:#FDE7C2;border-radius:8px;padding:4px 8px}.titem .due.late{background:#FDE2E1;color:#B42318}.titem .tbody{flex:1;min-width:0;font-size:14px;line-height:1.5;cursor:pointer}.titem .tbody b{display:block;font-size:15px}.titem button{flex:none;border:1px solid #F5B54A;background:#fff;border-radius:999px;padding:8px 12px;font-size:13px;color:#92400E}
+.stat{font:inherit;text-align:left;background:#fff;color:inherit;cursor:pointer;border:1px solid var(--line);border-radius:18px;padding:14px 16px;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}.stat span{width:100%;font-size:12px;color:var(--sub)}.stat b{font-size:28px}.stat small{font-size:13px;color:var(--sub)}
 .tabs{position:sticky;bottom:0;display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #EEE;background:#fff;padding:6px 8px 20px}.tabs button{height:48px;border:0;background:none;font-size:14px;color:var(--ink)}
 .req::after{content:' ＊';color:#B42318;font-weight:700}
 .reqnote{font-size:12px;color:var(--sub)}.reqnote b{color:#B42318}
@@ -222,15 +223,21 @@ async function home() {
 function prefetch(evs) {
   (evs || []).slice(0, 3).forEach((e, i) => setTimeout(() => run('api_getEvent', e.id).then(d => cset('ev:' + e.id, d)).catch(() => {}), 400 * (i + 1)));
 }
+// 承認待ちのあるイベントへ（1つならそのまま開く）
+function goDrafts() {
+  const ids = Object.keys(S.sum ? S.sum.draftsBy : {});
+  if (!ids.length) return toast('承認待ちはありません');
+  openEvent(ids[0]);
+}
 function renderHome() {
   const sum = S.sum;
   view(head('MW Desk', S.me) + `<main>
     <button class="btn" onclick="newEvent()">＋ イベント作成</button>
     <div class="row">
-      <div class="stat"><span>承認待ち</span><b>${sum.drafts}</b><small>件</small></div>
-      <div class="stat"><span>期限が近い</span><b>${sum.actions.length}</b><small>件</small></div>
+      <button class="stat ${sum.drafts ? 'hot' : ''}" onclick="goDrafts()"><span>承認待ち</span><b>${sum.drafts}</b><small>件</small></button>
+      <button class="stat ${sum.actions.length ? 'hot' : ''}" onclick="$('#todo') ? $('#todo').scrollIntoView({ behavior: 'smooth', block: 'start' }) : toast('期限が近いものはありません')"><span>期限が近い</span><b>${sum.actions.length}</b><small>件</small></button>
     </div>
-    ${sum.actions.length ? `<div><div class="h2">次にやること（7日以内・期限切れ）</div>${sum.actions.map(a => `<div class="line"><span>${a.late ? '<b class="err">期限切れ</b> ' : ''}${esc(a.company)} ${esc(a.name)}<br><small class="note">${esc(a.next)}${a.due ? '・' + esc(a.due) : ''}</small></span><button onclick="actDone('${a.id}')">済にする</button></div>`).join('')}</div>` : ''}
+    ${sum.actions.length ? `<section class="todo" id="todo"><h3>次にやること<small>7日以内・期限切れ</small></h3>${sum.actions.map(a => `<div class="titem"><span class="due ${a.late ? 'late' : ''}">${a.late ? '期限切れ' : a.due ? esc(a.due.slice(5).replace('-', '/')) + 'まで' : '期限なし'}</span><span class="tbody" onclick="contact('${a.id}')"><b>${esc(a.next)}</b>${esc(a.company)} ${esc(a.name)}</span><button onclick="actDone('${a.id}')">済にする</button></div>`).join('')}</section>` : ''}
     <div class="h2">自分のイベント</div>
     ${S.events.map(e => `<button class="item" onclick="openEvent('${e.id}')">${esc(e.name)}${sum.draftsBy[e.id] ? ` <span class="tag k">承認待ち ${sum.draftsBy[e.id]}</span>` : ''}<small>${jpDate(e.date)}・${esc(e.members.join('、'))}</small></button>`).join('') || '<p class="note">まだありません</p>'}
   </main><nav class="tabs"><button onclick="contacts()">相手一覧</button><button onclick="settings()">設定</button><button onclick="login()">切り替え</button></nav>`);
