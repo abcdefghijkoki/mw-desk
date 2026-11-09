@@ -111,7 +111,7 @@ select{background-image:linear-gradient(45deg,transparent 50%,var(--sub) 50%),li
 <div id="sync" role="status">保存中…</div>
 <script>
 // 通信先：Apps Script。画面がGitHub Pagesにあるときは fetch、Apps Script上で開いたときは google.script.run
-const API_URL = 'https://script.google.com/macros/s/AKfycby0KbqG6fVaHzLWseTRaOo8zou_MuWx7q-s6vGZCJ-iFxdb2SpIxHykPmgmt566qeZa/exec';
+const API_URL = 'https://mw-desk.miraiway.workers.dev';
 const store = { get: k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } },
   set: (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (e) {} } };
 let K = store.get('mw_k');
@@ -306,7 +306,7 @@ function contact(id) {
 function renderContact(c) {
   const row = (k, v) => v ? `<div class="line"><span class="note">${k}</span><span style="text-align:right">${esc(v)}</span></div>` : '';
   view(head(c.company || '相手', c.name, 'contacts()') + `<main>
-    ${c.img ? `<img src="data:image/jpeg;base64,${c.img}" alt="名刺画像" style="width:100%;border-radius:14px;border:1px solid var(--line)">` : ''}
+    ${c.img ? `<img src="data:${c.imgMime || 'image/jpeg'};base64,${c.img}" alt="名刺画像" style="width:100%;border-radius:14px;border:1px solid var(--line)">` : ''}
     <div>${row('氏名', c.name)}${row('社名', c.company)}${row('部署', c.dept)}${row('役職', c.title)}${row('メール', c.email)}${row('電話', c.phone)}</div>
     <div>${row('イベント', `${c.eventName}（${c.eventDate}）`)}${row('担当', c.by)}${row('ターゲット区分', c.target)}${row('深く話せた', c.deep ? 'はい' : '')}${row('事業', c.biz)}${row('連携', c.link)}${row('次にやること', c.next && c.next !== 'なし' ? `${c.next}${c.due ? '・' + c.due : ''}${c.nextDone ? '（済）' : ''}` : '')}${row('メール', { draft: '未承認', approved: '予約済', sent: '送信済' }[c.status])}</div>
     ${c.met.length ? `<div class="note" style="text-align:left">ほかに会ったイベント：${esc(c.met.join('、'))}</div>` : ''}
