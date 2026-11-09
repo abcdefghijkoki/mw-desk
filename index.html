@@ -99,6 +99,7 @@ select{background-image:linear-gradient(45deg,transparent 50%,var(--sub) 50%),li
 #sync{position:fixed;top:10px;right:10px;background:#F3F4F6;color:#4B5563;font-size:12px;padding:4px 10px;border-radius:999px;z-index:9;display:none}
 #toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:#191919;color:#fff;padding:10px 16px;border-radius:14px;font-size:14px;display:none;max-width:90%;z-index:9}
 .err{color:#B42318;font-size:12px}
+.ver{margin:8px 0 0;text-align:center;font-size:11px;color:#B0B4BA;letter-spacing:.04em}
 .stat.hot{border-color:#191919}.todo{background:#FFF7E6;border:1.5px solid #F5B54A;border-radius:18px;padding:14px 16px;scroll-margin-top:80px}.todo h3{margin:0 0 6px;font-size:16px;display:flex;align-items:baseline;gap:8px}.todo h3 small{font-size:12px;color:#92400E;font-weight:400}.titem{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #F7D9A8}.titem:first-of-type{border-top:0}.titem .due{flex:none;font-size:12px;font-weight:700;color:#92400E;background:#FDE7C2;border-radius:8px;padding:4px 8px}.titem .due.late{background:#FDE2E1;color:#B42318}.titem .tbody{flex:1;min-width:0;font-size:14px;line-height:1.5;cursor:pointer}.titem .tbody b{display:block;font-size:15px}.titem button{flex:none;border:1px solid #F5B54A;background:#fff;border-radius:999px;padding:8px 12px;font-size:13px;color:#92400E}
 .stat{font:inherit;text-align:left;background:#fff;color:inherit;cursor:pointer;border:1px solid var(--line);border-radius:18px;padding:14px 16px;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}.stat span{width:100%;font-size:12px;color:var(--sub)}.stat b{font-size:28px}.stat small{font-size:13px;color:var(--sub)}
 .tabs{position:sticky;bottom:0;display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #EEE;background:#fff;padding:6px 8px 20px}.tabs button{height:48px;border:0;background:none;font-size:14px;color:var(--ink)}
@@ -113,6 +114,9 @@ select{background-image:linear-gradient(45deg,transparent 50%,var(--sub) 50%),li
 <div id="sync" role="status">保存中…</div>
 <script>
 // 通信先：Apps Script。画面がGitHub Pagesにあるときは fetch、Apps Script上で開いたときは google.script.run
+// バージョン：直したら上げる（大きな機能追加は 1.x、小さな修正は 1.0.x）
+const VERSION = '1.0.0';
+const ver = () => `<p class="ver">MW Desk v${VERSION}</p>`;
 const API_URL = 'https://mw-desk.miraiway.workers.dev';
 const store = { get: k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } },
   set: (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (e) {} } };
@@ -240,7 +244,7 @@ function renderHome() {
     ${sum.actions.length ? `<section class="todo" id="todo"><h3>次にやること<small>7日以内・期限切れ</small></h3>${sum.actions.map(a => `<div class="titem"><span class="due ${a.late ? 'late' : ''}">${a.late ? '期限切れ' : a.due ? esc(a.due.slice(5).replace('-', '/')) + 'まで' : '期限なし'}</span><span class="tbody" onclick="contact('${a.id}')"><b>${esc(a.next)}</b>${esc(a.company)} ${esc(a.name)}</span><button onclick="actDone('${a.id}')">済にする</button></div>`).join('')}</section>` : ''}
     <div class="h2">自分のイベント</div>
     ${S.events.map(e => `<button class="item" onclick="openEvent('${e.id}')">${esc(e.name)}${sum.draftsBy[e.id] ? ` <span class="tag k">承認待ち ${sum.draftsBy[e.id]}</span>` : ''}<small>${jpDate(e.date)}・${esc(e.members.join('、'))}</small></button>`).join('') || '<p class="note">まだありません</p>'}
-  </main><nav class="tabs"><button onclick="contacts()">相手一覧</button><button onclick="settings()">設定</button><button onclick="login()">切り替え</button></nav>`);
+  ${ver()}</main><nav class="tabs"><button onclick="contacts()">相手一覧</button><button onclick="settings()">設定</button><button onclick="login()">切り替え</button></nav>`);
 }
 function actDone(id) {
   const before = S.sum.actions;
@@ -285,6 +289,7 @@ function renderDash(d) {
           ${d.people.map(p => `<tr><td>${esc(p.name)}</td><td class="n">${p.cards}</td><td class="n">${p.drafts || 0}</td>
             <td class="n">${p.late ? `<span class="pillc ng">${p.late}</span>` : 0}</td><td class="n">${p.owed ? `<span class="pillc mid">${p.owed}</span>` : 0}</td></tr>`).join('')}</table></div>
       </div>
+      ${ver()}
     </div></div>`, true);
 }
 
