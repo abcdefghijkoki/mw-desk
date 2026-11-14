@@ -127,7 +127,7 @@ select{background-image:linear-gradient(45deg,transparent 50%,var(--sub) 50%),li
 <script>
 // 通信先：Apps Script。画面がGitHub Pagesにあるときは fetch、Apps Script上で開いたときは google.script.run
 // バージョン：直したら上げる（大きな機能追加は 1.x、小さな修正は 1.0.x）
-const VERSION = '1.2.0';
+const VERSION = '1.3.0';
 const ver = () => `<p class="ver">MW Desk v${VERSION}</p>`;
 const API_URL = 'https://mw-desk.miraiway.workers.dev';
 const store = { get: k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } },
@@ -336,7 +336,7 @@ function contact(id) {
 function renderContact(c) {
   const row = (k, v) => v ? `<div class="line"><span class="note">${k}</span><span style="text-align:right">${esc(v)}</span></div>` : '';
   view(head(c.company || '相手', c.name, 'contacts()') + `<main>
-    ${c.img ? `<img src="data:${c.imgMime || 'image/jpeg'};base64,${c.img}" alt="名刺画像" style="width:100%;border-radius:14px;border:1px solid var(--line)">` : ''}
+    ${c.fileKey ? thumb(c, 'cardimg') : ''}
     <div>${row('氏名', c.name)}${row('社名', c.company)}${row('部署', c.dept)}${row('役職', c.title)}${row('メール', c.email)}${row('電話', c.phone)}</div>
     <div>${row('イベント', `${c.eventName}（${c.eventDate}）`)}${row('担当', c.by)}${row('ターゲット区分', c.target)}${row('深く話せた', c.deep ? 'はい' : '')}${row('事業', c.biz)}${row('連携', c.link)}${row('次にやること', c.next && c.next !== 'なし' ? `${c.next}${c.due ? '・' + c.due : ''}${c.nextDone ? '（済）' : ''}` : '')}${row('メール', { draft: '未承認', approved: '予約済', sent: '送信済' }[c.status])}</div>
     ${c.met.length ? `<div class="note" style="text-align:left">ほかに会ったイベント：${esc(c.met.join('、'))}</div>` : ''}
@@ -648,11 +648,11 @@ function talk() {
   </main><div class="foot"><button class="btn" id="go">振り分ける</button></div>`);
   $('#go').onclick = async () => {
     $('#go').disabled = true;
-    const n = mine.length, steps = [[0, `${n}人の名刺を確認中…`], [3, '話した内容を整理中…'], [7, 'シーンとテンプレートを選択中…'], [12, `${n}人分のメールを作成中…`], [20, '仕上げ中…もう少しです']];
+    const n = mine.length, steps = [[0, `${n}人の名刺を確認中…`], [1.5, '話した内容を整理中…'], [3.5, 'シーンとテンプレートを選択中…'], [5.5, `${n}人分のメールを作成中…`], [9, '仕上げ中…もう少しです']];
     $('#go').insertAdjacentHTML('beforebegin', '<div class="prog"><i id="bar"></i></div>');
     const t0 = Date.now(), tick = setInterval(() => {
       const s = (Date.now() - t0) / 1000; $('#go').textContent = steps.filter(x => x[0] <= s).pop()[1];
-      $('#bar').style.width = Math.min(95, 100 * (1 - Math.exp(-s / 9))) + '%'; // 終わりが近づくほどゆっくり進む
+      $('#bar').style.width = Math.min(95, 100 * (1 - Math.exp(-s / 4))) + '%'; // 終わりが近づくほどゆっくり進む
     }, 300);
     try { Object.assign(S, await run('api_assign', ev.id, $('#talk').value)); cacheEv(); clearInterval(tick); $('#bar').style.width = '100%'; setTimeout(swipe, 250); }
     catch (e) { clearInterval(tick); fail(e); $('.prog').remove(); $('#go').disabled = false; $('#go').textContent = '振り分ける'; }
