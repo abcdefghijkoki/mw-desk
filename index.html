@@ -108,7 +108,7 @@ select{background-image:linear-gradient(45deg,transparent 50%,var(--sub) 50%),li
 .ver{margin:8px 0 0;text-align:center;font-size:11px;color:#B0B4BA;letter-spacing:.04em}
 .stat.hot{border-color:#191919}.todo{background:#FFF7E6;border:1.5px solid #F5B54A;border-radius:18px;padding:14px 16px;scroll-margin-top:80px}.todo h3{margin:0 0 6px;font-size:16px;display:flex;align-items:baseline;gap:8px}.todo h3 small{font-size:12px;color:#92400E;font-weight:400}.titem{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #F7D9A8}.titem:first-of-type{border-top:0}.titem .due{flex:none;font-size:12px;font-weight:700;color:#92400E;background:#FDE7C2;border-radius:8px;padding:4px 8px}.titem .due.late{background:#FDE2E1;color:#B42318}.titem .tbody{flex:1;min-width:0;font-size:14px;line-height:1.5;cursor:pointer}.titem .tbody b{display:block;font-size:15px}.titem button{flex:none;border:1px solid #F5B54A;background:#fff;border-radius:999px;padding:8px 12px;font-size:13px;color:#92400E}
 .stat{font:inherit;text-align:left;background:#fff;color:inherit;cursor:pointer;border:1px solid var(--line);border-radius:18px;padding:14px 16px;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}.stat span{width:100%;font-size:12px;color:var(--sub)}.stat b{font-size:28px}.stat small{font-size:13px;color:var(--sub)}
-.tabs{position:sticky;bottom:0;display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #EEE;background:#fff;padding:6px 8px 20px}.tabs button{height:48px;border:0;background:none;font-size:14px;color:var(--ink)}
+.tabs{position:sticky;bottom:0;display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid #EEE;background:#fff;padding:6px 8px 20px}.tabs button{height:48px;border:0;background:none;font-size:14px;color:var(--ink)}
 .req::after{content:' ＊';color:#B42318;font-weight:700}
 .reqnote{font-size:12px;color:var(--sub)}.reqnote b{color:#B42318}
 .shim{background:linear-gradient(90deg,#9CA3AF 0%,#D1D5DB 40%,#9CA3AF 80%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shim 1.4s linear infinite}
@@ -127,7 +127,7 @@ select{background-image:linear-gradient(45deg,transparent 50%,var(--sub) 50%),li
 <script>
 // 通信先：Apps Script。画面がGitHub Pagesにあるときは fetch、Apps Script上で開いたときは google.script.run
 // バージョン：直したら上げる（大きな機能追加は 1.x、小さな修正は 1.0.x）
-const VERSION = '1.3.0';
+const VERSION = '1.4.0';
 const ver = () => `<p class="ver">MW Desk v${VERSION}</p>`;
 const API_URL = 'https://mw-desk.miraiway.workers.dev';
 const store = { get: k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } },
@@ -261,7 +261,7 @@ function renderHome() {
     ${sum.actions.length ? `<section class="todo" id="todo"><h3>次にやること<small>7日以内・期限切れ</small></h3>${sum.actions.map(a => `<div class="titem"><span class="due ${a.late ? 'late' : ''}">${a.late ? '期限切れ' : a.due ? esc(a.due.slice(5).replace('-', '/')) + 'まで' : '期限なし'}</span><span class="tbody" onclick="contact('${a.id}')"><b>${esc(a.next)}</b>${esc(a.company)} ${esc(a.name)}</span><button onclick="actDone('${a.id}')">済にする</button></div>`).join('')}</section>` : ''}
     <div class="h2">自分のイベント</div>
     ${S.events.map(e => `<button class="item" onclick="openEvent('${e.id}')">${esc(e.name)}${sum.draftsBy[e.id] ? ` <span class="tag k">承認待ち ${sum.draftsBy[e.id]}</span>` : ''}<small>${jpDate(e.date)}・${esc(e.members.join('、'))}</small></button>`).join('') || '<p class="note">まだありません</p>'}
-  ${ver()}</main><nav class="tabs"><button onclick="contacts()">相手一覧</button><button onclick="settings()">設定</button><button onclick="login()">切り替え</button></nav>`);
+  ${ver()}</main><nav class="tabs"><button onclick="leads()">リード</button><button onclick="contacts()">相手一覧</button><button onclick="settings()">設定</button><button onclick="login()">切り替え</button></nav>`);
 }
 function actDone(id) {
   const before = S.sum.actions;
@@ -275,7 +275,7 @@ function actDone(id) {
 function bar(on) {
   const b = (k, t, fn) => `<button class="${on === k ? 'on' : ''}" onclick="${fn}">${t}</button>`;
   return `<nav class="bar"><b>MW Desk <small class="note">${esc(S.me)}</small></b>
-    ${b('dash', 'ダッシュボード', 'home()')}${b('contacts', '相手一覧', 'contacts()')}${b('settings', '設定', 'settings()')}
+    ${b('dash', 'ダッシュボード', 'home()')}${b('leads', 'リード管理', 'leads()')}${b('contacts', '相手一覧', 'contacts()')}${b('settings', '設定', 'settings()')}
     ${S.lead ? `<a href="${esc(S.lead)}" target="_blank" rel="noopener">リード表 ↗</a>` : ''}
     <button onclick="phoneMode(true)">📱 スマホ表示</button><button onclick="login()">切り替え</button><button class="new" onclick="newEvent()">＋ イベント作成</button></nav>`;
 }
@@ -308,6 +308,62 @@ function renderDash(d) {
       </div>
       ${ver()}
     </div></div>`, true);
+}
+
+// ───── リード管理（パソコン：一覧で直接更新 ／ スマホ：見るだけ） ─────
+const NEXTS = ['アポ打診', '紹介', '資料送付', 'その他', 'なし'];
+const LF = { q: '', by: '', show: 'todo' }; // 絞り込み（画面を移っても覚えておく）
+function leads() {
+  const wide = WIDE();
+  view((wide ? bar('leads') : head('リード', '次にやることの一覧', 'home()')) + `<main${wide ? ' class="dash"' : ''}>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <input id="lq" type="search" placeholder="社名・氏名・イベントで検索" value="${esc(LF.q)}" aria-label="検索" style="flex:2;min-width:200px">
+      <select id="lby" aria-label="担当" style="flex:1;min-width:120px"><option value="">担当：全員</option>${S.members.map(m => `<option ${LF.by === m ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select>
+      <select id="lshow" aria-label="表示" style="flex:1;min-width:140px">${[['todo', '要対応'], ['late', '期限切れ'], ['done', '済'], ['all', 'すべて']].map(([v, t]) => `<option value="${v}" ${LF.show === v ? 'selected' : ''}>${t}</option>`).join('')}</select>
+    </div>
+    <div id="lsum" class="note" style="text-align:left"></div>
+    <div id="llist"><p class="note">読み込み中…</p></div></main>`, wide);
+  const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+  let all = cget('leads') || null;
+  const paint = () => {
+    if (!$('#llist') || !all) return;
+    const w = LF.q.toLowerCase().split(/\s+/).filter(Boolean);
+    const late = l => !l.nextDone && l.next !== 'なし' && l.due && l.due < today;
+    const ls = all.filter(l => (!LF.by || l.by === LF.by)
+      && ({ todo: !l.nextDone && l.next !== 'なし', late: late(l), done: l.nextDone, all: true })[LF.show]
+      && w.every(x => `${l.company} ${l.name} ${l.event} ${l.hot}`.toLowerCase().includes(x)))
+      .sort((a, b) => (a.due || '9').localeCompare(b.due || '9') || b.date.localeCompare(a.date));
+    $('#lsum').textContent = `${ls.length}件（期限切れ ${all.filter(late).length}件）`;
+    const dueTag = l => l.nextDone ? '<span class="pillc gray">済</span>' : late(l) ? `<span class="pillc ng">${esc(l.due.slice(5).replace('-', '/'))} 期限切れ</span>` : l.due ? `<span class="pillc mid">${esc(l.due.slice(5).replace('-', '/'))}まで</span>` : '';
+    $('#llist').innerHTML = !ls.length ? '<p class="note">該当するリードはありません</p>' : wide
+      ? `<div class="panel"><table class="t"><tr><th>済</th><th>期限</th><th>次にやること</th><th>相手</th><th>担当</th><th>状態</th><th>区分</th><th>熱い理由</th><th>イベント</th></tr>${ls.map(l => `<tr data-l="${l.id}" style="${l.nextDone ? 'opacity:.5' : ''}">
+          <td><input type="checkbox" class="ldone" ${l.nextDone ? 'checked' : ''} aria-label="済"></td>
+          <td><input type="date" class="ldue" value="${esc(l.due)}" aria-label="期限" style="height:36px;min-width:150px;font-size:14px;padding:0 10px;${late(l) ? 'color:#B42318;border-color:#F5B5B0' : ''}"></td>
+          <td><select class="lnext" aria-label="次にやること" style="height:36px;font-size:14px;padding:0 30px 0 10px;min-width:120px">${NEXTS.map(n => `<option ${n === l.next ? 'selected' : ''}>${n}</option>`).join('')}</select></td>
+          <td><a href="#" onclick="contact('${l.id}');return false" style="color:inherit;text-decoration:none"><b>${esc(l.company || '社名未読取')}</b><br>${esc(l.name)}</a></td>
+          <td>${esc(l.by)}</td><td>${STATUS[l.status] || ''}</td><td>${esc(l.target)}</td>
+          <td><input class="lhot" value="${esc(l.hot)}" placeholder="—" aria-label="熱い理由" style="height:36px;min-width:180px;font-size:14px;padding:0 10px"></td>
+          <td>${esc(l.event)}<br><small class="note">${esc(l.date)}</small></td></tr>`).join('')}</table></div>`
+      : ls.map(l => `<button class="item" onclick="contact('${l.id}')">${esc(l.company || '社名未読取')} ${esc(l.name)} ${dueTag(l)}<small>${esc(l.next)}・担当 ${esc(l.by)}・${esc(l.event)}</small></button>`).join('');
+    if (!wide) return;
+    // その場で更新（押した瞬間に画面へ反映し、保存は裏で）
+    const upd = (tr, patch) => {
+      const l = all.find(x => x.id === tr.dataset.l), before = Object.assign({}, l);
+      Object.assign(l, patch); cset('leads', all); paint();
+      bg(run('api_updateLead', l.id, patch), () => { Object.assign(l, before); paint(); });
+    };
+    document.querySelectorAll('#llist tr[data-l]').forEach(tr => {
+      tr.querySelector('.ldone').onchange = e => upd(tr, { nextDone: e.target.checked });
+      tr.querySelector('.ldue').onchange = e => upd(tr, { due: e.target.value });
+      tr.querySelector('.lnext').onchange = e => upd(tr, { next: e.target.value });
+      tr.querySelector('.lhot').onchange = e => upd(tr, { hot: e.target.value.trim() });
+    });
+  };
+  let t; $('#lq').oninput = () => { clearTimeout(t); t = setTimeout(() => { LF.q = $('#lq').value; paint(); }, 200); };
+  $('#lby').onchange = () => { LF.by = $('#lby').value; paint(); };
+  $('#lshow').onchange = () => { LF.show = $('#lshow').value; paint(); };
+  paint();
+  run('api_leads').then(ls => { all = ls; cset('leads', ls); if (!busy()) paint(); }).catch(e => { if (!all) oops(e, 'leads()'); });
 }
 
 // ───── 相手一覧 ─────
