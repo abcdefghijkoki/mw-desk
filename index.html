@@ -111,6 +111,11 @@ select{background-image:linear-gradient(45deg,transparent 50%,var(--sub) 50%),li
 .tabs{position:sticky;bottom:0;display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #EEE;background:#fff;padding:6px 8px 20px}.tabs button{height:48px;border:0;background:none;font-size:14px;color:var(--ink)}
 .req::after{content:' ＊';color:#B42318;font-weight:700}
 .reqnote{font-size:12px;color:var(--sub)}.reqnote b{color:#B42318}
+.shim{background:linear-gradient(90deg,#9CA3AF 0%,#D1D5DB 40%,#9CA3AF 80%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shim 1.4s linear infinite}
+@keyframes shim{from{background-position:200% 0}to{background-position:-200% 0}}
+.up-run .th{opacity:.6}.up-ng .cn{color:#B42318}
+@keyframes flash{from{background:#EAF3FF}to{background:#fff}}.up-done{animation:flash 1.2s ease-out}
+.prog{height:4px;border-radius:2px;background:#EEE;overflow:hidden}.prog i{display:block;height:4px;background:#191919;width:0;transition:width 1s linear}
 .up{display:flex;align-items:center;gap:12px;padding:6px 0;font-size:13px}.up img{width:56px;height:40px;object-fit:cover;border-radius:8px;border:1px solid var(--line);flex:none}
 </style>
 </head>
@@ -122,7 +127,7 @@ select{background-image:linear-gradient(45deg,transparent 50%,var(--sub) 50%),li
 <script>
 // 通信先：Apps Script。画面がGitHub Pagesにあるときは fetch、Apps Script上で開いたときは google.script.run
 // バージョン：直したら上げる（大きな機能追加は 1.x、小さな修正は 1.0.x）
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 const ver = () => `<p class="ver">MW Desk v${VERSION}</p>`;
 const API_URL = 'https://mw-desk.miraiway.workers.dev';
 const store = { get: k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } },
@@ -401,10 +406,10 @@ function renderEvent(keepScroll = false) {
   view(head(ev.name, jpDate(ev.date), 'home()') + `<main>
     ${steps(ev, cards)}
     <div class="h2"><span>名刺・写真</span><span>名刺 ${cards.length}・写真 ${ev.photos}</span></div>
-    <label class="drop" for="up" id="dropt">＋ 名刺と写真をまとめて選ぶ<br>（区別しなくてOK）</label>
+    <label class="drop" for="up" id="dropt">${upLabel(id)}</label>
     <input id="up" type="file" accept="image/*,.heic,.heif" multiple style="display:none">
-    <div id="prog"></div>
-    ${cards.map(c => `<div class="mrow"><button class="mdel" onclick="delCard('${c.id}')">削除</button><div class="line crow" data-c="${c.id}" onclick="openCard('${c.id}')">${thumb(c, 'th')}<span class="cn">${esc(c.company || '社名未読取')} ${esc(c.name)}</span><span class="tag">${STATUS[c.status]}</span></div></div>`).join('')}
+    <div id="cards">${(UPQ[id] || []).map(upRow).join('')}
+    ${cards.map(c => `<div class="mrow"><button class="mdel" onclick="delCard('${c.id}')">削除</button><div class="line crow" data-c="${c.id}" onclick="openCard('${c.id}')">${thumb(c, 'th')}<span class="cn">${esc(c.company || '社名未読取')} ${esc(c.name)}</span><span class="tag">${STATUS[c.status]}</span></div></div>`).join('')}</div>
     ${cards.some(c => c.status !== 'draft') ? `<button class="btn2" onclick="done()">送信予約を見る</button>` : ''}
     <div class="h2">会場メモ</div>
     ${ev.memos.map((m, j) => `<div class="mrow"><button class="mdel" onclick="delMemo(${j})">削除</button><div class="memo" data-j="${j}"><span>${esc(m.t)}</span><div>${esc(m.text)}</div></div></div>`).join('')}
@@ -429,27 +434,55 @@ function renderEvent(keepScroll = false) {
   };
   $('#addm').onclick = addMemo;
   $('#memo').onkeydown = e => { if (e.key === 'Enter' && !e.isComposing) addMemo(); };
-  $('#up').onchange = async e => {
-    const files = [...e.target.files]; if (!files.length) return;
-    UPLOADING = true; await ready(id);
-    $('#dropt').textContent = `${files.length}枚を取り込み中…（画面を閉じないでください）`;
-    $('#prog').innerHTML = files.map((f, j) => `<div class="up"><img src="${URL.createObjectURL(f)}" alt=""><span id="st${j}">待機中</span></div>`).join('');
-    let cardsN = 0, photoN = 0, ng = 0, next = 0;
-    const one = async j => {
-      $('#st' + j).textContent = '読み取り中…';
-      try {
-        const img = await toB64(files[j]);
-        const r = await run('api_upload', id, img.b64, img.mime);
-        if (r.type === 'photo') { photoN++; $('#st' + j).textContent = '✓ 会場写真'; }
-        else { cardsN++; $('#st' + j).textContent = `✓ 名刺：${r.company || '社名未読取'} ${r.name || ''}`; }
-      } catch (err) { ng++; $('#st' + j).textContent = '× 失敗：' + (err.message || err); }
-    };
-    // 3枚ずつ同時に送る（AI無料枠の回数制限に当たりにくい数）
-    await Promise.all([0, 1, 2].map(async () => { while (next < files.length) await one(next++); }));
-    UPLOADING = false;
-    toast(`名刺 ${cardsN}枚・写真 ${photoN}枚を保存しました${ng ? `（失敗 ${ng}枚）` : ''}`, 4000);
-    setTimeout(() => openEvent(id), 1200);
-  };
+  $('#up').onchange = e => { const files = [...e.target.files]; e.target.value = ''; if (files.length) enqueue(id, files); };
+}
+
+// ───── 名刺の取り込み（読み取り中も画面を止めない） ─────
+// 選んだ瞬間に一覧へ「読み取り中」の行を出し、裏で3枚ずつAIに送る。終わった行から社名・氏名に変わる
+const UPQ = {}; // イベントごとの取り込み待ち・読み取り中
+let UPN = 0, UPWORK = 0;
+const upLabel = id => {
+  const q = UPQ[id] || [], left = q.filter(u => u.st !== 'ng').length;
+  return left ? `<span><b>AIが読み取り中… 残り ${left}枚</b><br><small>このまま操作を続けられます。追加もできます</small></span>` : '<span>＋ 名刺と写真をまとめて選ぶ<br>（区別しなくてOK）</span>';
+};
+const upRow = u => u.st === 'ng'
+  ? `<div class="line crow up-ng" id="u${u.n}" onclick="retryUp(${u.n})"><img class="th" src="${u.url}" alt=""><span class="cn">送れませんでした（タップで再送）</span><span class="tag">失敗</span></div>`
+  : `<div class="line crow up-run" id="u${u.n}"><img class="th" src="${u.url}" alt=""><span class="cn"><span class="shim">AIが読み取り中…</span></span><span class="tag">読取中</span></div>`;
+function enqueue(id, files) {
+  const q = UPQ[id] = UPQ[id] || [];
+  files.forEach(f => q.push({ n: ++UPN, f, url: URL.createObjectURL(f), st: 'wait' }));
+  UPLOADING = true; refreshUp(id, true);
+  for (let w = UPWORK; w < 3; w++) upWorker(id); // 3枚ずつ同時に送る（AI無料枠の回数制限に当たりにくい数）
+}
+async function upWorker(id) {
+  UPWORK++;
+  await ready(id);
+  for (let u; (u = (UPQ[id] || []).find(x => x.st === 'wait'));) {
+    u.st = 'run';
+    try {
+      const img = await toB64(u.f);
+      const r = await run('api_upload', id, img.b64, img.mime);
+      UPQ[id] = UPQ[id].filter(x => x !== u);
+      if (r.type === 'photo') { if (S.ev && S.ev.id === id) S.ev.photos++; toast('会場写真として保存しました', 1500); }
+      else if (S.ev && S.ev.id === id) S.contacts.push(r);
+      cacheEv(); refreshUp(id, false, u, r);
+    } catch (err) { u.st = 'ng'; u.err = err.message || String(err); refreshUp(id, false, u); }
+  }
+  if (--UPWORK === 0) { UPLOADING = false; const ng = (UPQ[id] || []).length; toast(ng ? `${ng}枚 送れませんでした。行をタップで再送できます` : '取り込みが終わりました', 3000); if (S.ev && S.ev.id === id && !busy()) renderEvent(true); }
+}
+function retryUp(n) {
+  const id = S.ev.id, u = (UPQ[id] || []).find(x => x.n === n); if (!u) return;
+  UPQ[id] = UPQ[id].filter(x => x !== u); enqueue(id, [u.f]);
+}
+// 画面全体は描き直さず、その行と見出しだけを差し替える（打ちかけのメモが消えないように）
+function refreshUp(id, added, u, r) {
+  if (!S.ev || S.ev.id !== id || !$('#cards')) return;
+  $('#dropt').innerHTML = upLabel(id);
+  if (added) { const box = $('#cards'); [...UPQ[id]].reverse().forEach(x => { if (!$('#u' + x.n)) box.insertAdjacentHTML('afterbegin', upRow(x)); }); return; }
+  const row = u && $('#u' + u.n); if (!row) return;
+  if (!r) { row.outerHTML = upRow(u); return; }
+  if (r.type === 'photo') { row.remove(); return; }
+  row.outerHTML = `<div class="mrow"><button class="mdel" onclick="delCard('${r.id}')">削除</button><div class="line crow up-done" data-c="${r.id}" onclick="openCard('${r.id}')">${thumb(r, 'th')}<span class="cn">${esc(r.company || '社名未読取')} ${esc(r.name)}</span><span class="tag">${STATUS[r.status]}</span></div></div>`;
 }
 
 // オンにした機能だけを上から順に並べる
@@ -591,7 +624,7 @@ function delMemo(j) {
 async function toB64(file) {
   try {
     const img = await createImageBitmap(file);
-    const r = Math.min(1, 1280 / Math.max(img.width, img.height));
+    const r = Math.min(1, 1024 / Math.max(img.width, img.height));
     const c = document.createElement('canvas'); c.width = img.width * r; c.height = img.height * r;
     c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
     return { b64: c.toDataURL('image/jpeg', 0.8).split(',')[1], mime: 'image/jpeg' };
@@ -614,9 +647,15 @@ function talk() {
     <span class="note">会場メモ ${ev.memos.length}件も一緒に使います</span>
   </main><div class="foot"><button class="btn" id="go">振り分ける</button></div>`);
   $('#go').onclick = async () => {
-    $('#go').disabled = true; $('#go').textContent = 'AIが振り分け中…';
-    try { Object.assign(S, await run('api_assign', ev.id, $('#talk').value)); cacheEv(); swipe(); }
-    catch (e) { fail(e); $('#go').disabled = false; $('#go').textContent = '振り分ける'; }
+    $('#go').disabled = true;
+    const n = mine.length, steps = [[0, `${n}人の名刺を確認中…`], [3, '話した内容を整理中…'], [7, 'シーンとテンプレートを選択中…'], [12, `${n}人分のメールを作成中…`], [20, '仕上げ中…もう少しです']];
+    $('#go').insertAdjacentHTML('beforebegin', '<div class="prog"><i id="bar"></i></div>');
+    const t0 = Date.now(), tick = setInterval(() => {
+      const s = (Date.now() - t0) / 1000; $('#go').textContent = steps.filter(x => x[0] <= s).pop()[1];
+      $('#bar').style.width = Math.min(95, 100 * (1 - Math.exp(-s / 9))) + '%'; // 終わりが近づくほどゆっくり進む
+    }, 300);
+    try { Object.assign(S, await run('api_assign', ev.id, $('#talk').value)); cacheEv(); clearInterval(tick); $('#bar').style.width = '100%'; setTimeout(swipe, 250); }
+    catch (e) { clearInterval(tick); fail(e); $('.prog').remove(); $('#go').disabled = false; $('#go').textContent = '振り分ける'; }
   };
 }
 
