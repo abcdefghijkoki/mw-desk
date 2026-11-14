@@ -19,6 +19,12 @@
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Noto Sans JP',sans-serif;color:var(--ink);background:#fff;-webkit-text-size-adjust:100%}
 #app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
 #app.wide{max-width:1240px}
+/* パソコンでスマホ画面を見せる（プレゼン用）：画面中央にスマホの大きさの枠で表示 */
+body.phone{background:#0B0B0F;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
+body.phone #app{width:390px;max-width:390px;height:844px;max-height:94vh;min-height:0;margin:0;overflow-y:auto;border-radius:52px;border:12px solid #1C1C21;outline:2px solid #3A3A44;box-shadow:0 40px 120px rgba(41,151,255,.25);background:#fff;transform:translateZ(0)}
+body.phone #app::-webkit-scrollbar{display:none}
+#pcback{display:none}
+body.phone #pcback{display:block;position:fixed;top:20px;left:20px;border:1px solid #3A3A44;background:#1C1C21;color:#E5E7EB;border-radius:999px;padding:10px 18px;font-size:14px;cursor:pointer}
 #app.wide>main:not(.dash){max-width:560px;width:100%;margin:0 auto}
 #app.wide>.foot{max-width:560px;width:100%;margin:0 auto}
 .bar{display:flex;align-items:center;gap:6px;padding:10px 24px;border-bottom:1px solid #EEE;position:sticky;top:0;background:#fff;z-index:2;flex-wrap:wrap}
@@ -74,7 +80,7 @@ select{background-image:linear-gradient(45deg,transparent 50%,var(--sub) 50%),li
 .item{display:block;width:100%;text-align:left;padding:16px;border:1px solid var(--line);border-radius:18px;background:#fff;color:var(--ink);font-size:15px}
 .item small{display:block;color:var(--sub);font-size:12px;margin-top:4px}
 .h2{margin:0;font-size:13px;font-weight:500;color:var(--sub);display:flex;justify-content:space-between}
-.mrow{position:relative;overflow:hidden;border-radius:10px}.mdel{position:absolute;right:0;top:0;bottom:0;width:80px;border:0;background:#B42318;color:#fff;font-size:14px}
+.mrow{position:relative;overflow:hidden;border-radius:10px}.mdel{position:absolute;right:0;top:0;bottom:0;width:80px;border:0;background:#B42318;color:#fff;font-size:14px;visibility:hidden}
 .memo{display:flex;gap:12px;font-size:14px;line-height:1.6;background:#fff;position:relative;padding:6px 0;transition:transform .2s;touch-action:pan-y}.memo span{font-size:12px;color:#9CA3AF;width:36px;flex:none}
 .add{display:flex;gap:8px}.add input{flex:1}.add button{width:64px;border-radius:14px;border:0;background:#F3F4F6;font-size:14px}
 .drop{display:flex;align-items:center;justify-content:center;height:96px;border:1px dashed #C7CCD4;border-radius:14px;font-size:14px;color:var(--sub);text-align:center;padding:8px}
@@ -109,13 +115,14 @@ select{background-image:linear-gradient(45deg,transparent 50%,var(--sub) 50%),li
 </style>
 </head>
 <body>
+<button id="pcback" onclick="phoneMode(false)">← パソコン表示に戻る</button>
 <div id="app"></div>
 <div id="toast"></div>
 <div id="sync" role="status">保存中…</div>
 <script>
 // 通信先：Apps Script。画面がGitHub Pagesにあるときは fetch、Apps Script上で開いたときは google.script.run
 // バージョン：直したら上げる（大きな機能追加は 1.x、小さな修正は 1.0.x）
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 const ver = () => `<p class="ver">MW Desk v${VERSION}</p>`;
 const API_URL = 'https://mw-desk.miraiway.workers.dev';
 const store = { get: k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } },
@@ -138,7 +145,7 @@ const BLOCKS = {'03':{A:'A 全体',B:'B 人材',C:'C 制作',D:'D 日本語教�
 const needsSched = c => c.scene === '03' || (c.scene === '04' && c.block === '2');
 const jpDate = d => { const x = new Date(d + 'T12:00:00'); return `${x.getMonth()+1}月${x.getDate()}日（${'日月火水木金土'[x.getDay()]}）`; };
 let SCR = 0; // 画面を描くたびに増える。古い通信の結果で、もう離れた画面を描き直さないため
-const view = (h, wide = false, keepScroll = false) => { SCR++; const a = $('#app'); a.className = wide ? 'wide' : ''; const y = scrollY; a.innerHTML = h; window.scrollTo(0, keepScroll ? y : 0); };
+const view = (h, wide = false, keepScroll = false) => { SCR++; const a = $('#app'); a.className = wide ? 'wide' : ''; const y = scrollY, ay = a.scrollTop; a.innerHTML = h; window.scrollTo(0, keepScroll ? y : 0); a.scrollTop = keepScroll ? ay : 0; };
 
 // ── 速さの工夫1：一度見た画面は端末に覚えておき、すぐ表示 → 裏で最新を取って差し替える
 const ckey = k => 'c:' + K.slice(0, 8) + ':' + k;
@@ -174,7 +181,12 @@ const CREATING = {};
 const ready = id => CREATING[id] || Promise.resolve();
 const cacheEv = () => cset('ev:' + S.ev.id, { ev: S.ev, contacts: S.contacts, total: S.total });
 const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); }));
-const WIDE = () => matchMedia('(min-width: 900px)').matches;
+// プレゼン用のスマホ表示（パソコンだけで有効。端末に記憶）
+const BIG = matchMedia('(min-width: 900px)').matches;
+const PHONE = BIG && store.get('mw_phone') === '1';
+if (PHONE) document.body.classList.add('phone');
+const WIDE = () => !PHONE && matchMedia('(min-width: 900px)').matches;
+function phoneMode(on) { store.set('mw_phone', on ? '1' : ''); location.reload(); }
 // 読み込みに失敗したとき、真っ白にせず「もう一度」を出す
 const oops = (e, retry) => view(`<main><p class="err" style="font-size:14px">${esc(e.message || e)}</p><button class="btn2" onclick="${retry}">もう一度読み込む</button></main>`);
 const STATUS = { draft: '未承認', approved: '予約済', sent: '送信済' };
@@ -260,7 +272,7 @@ function bar(on) {
   return `<nav class="bar"><b>MW Desk <small class="note">${esc(S.me)}</small></b>
     ${b('dash', 'ダッシュボード', 'home()')}${b('contacts', '相手一覧', 'contacts()')}${b('settings', '設定', 'settings()')}
     ${S.lead ? `<a href="${esc(S.lead)}" target="_blank" rel="noopener">リード表 ↗</a>` : ''}
-    <button onclick="login()">切り替え</button><button class="new" onclick="newEvent()">＋ イベント作成</button></nav>`;
+    <button onclick="phoneMode(true)">📱 スマホ表示</button><button onclick="login()">切り替え</button><button class="new" onclick="newEvent()">＋ イベント作成</button></nav>`;
 }
 async function dashboard() {
   const v = await swr('dash', 'api_dashboard', [], renderDash, e => K && oops(e, 'home()'), true);
@@ -403,9 +415,10 @@ function renderEvent(keepScroll = false) {
   // 左にスワイプで「削除」ボタンを出す（スワイプだけでは消えない）
   document.querySelectorAll('.memo[data-j], .crow').forEach(row => {
     let x0 = null, dx = 0;
-    row.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; dx = 0; row.style.transition = 'none'; }, { passive: true });
+    const del = row.parentNode.querySelector('.mdel');
+    row.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; dx = 0; row.style.transition = 'none'; if (del) del.style.visibility = 'visible'; }, { passive: true });
     row.addEventListener('touchmove', e => { if (x0 == null) return; dx = Math.min(0, e.touches[0].clientX - x0); row.style.transform = `translateX(${Math.max(dx, -96)}px)`; }, { passive: true });
-    row.addEventListener('touchend', () => { row.style.transition = ''; x0 = null; row.style.transform = dx < -48 ? 'translateX(-80px)' : ''; });
+    row.addEventListener('touchend', () => { row.style.transition = ''; x0 = null; const open = dx < -48; row.style.transform = open ? 'translateX(-80px)' : ''; if (del && !open) setTimeout(() => { if (!row.style.transform) del.style.visibility = 'hidden'; }, 250); });
   });
   const addMemo = () => {
     const t = $('#memo').value.trim(); if (!t) return;
