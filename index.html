@@ -12,111 +12,206 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <style>
-:root{--ink:#111827;--sub:#6B7280;--line:#E5E7EB;--soft:#F7F7F8;--btn:#191919}
-*{box-sizing:border-box}
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Noto Sans JP',sans-serif;color:var(--ink);background:#fff;-webkit-text-size-adjust:100%}
-#app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+/* MW Desk の見た目（iOS 純正アプリの作法：意味で決めた色・グループリスト・すりガラス・控えめな動き）
+ */
+:root{
+  --bg:#F2F2F7;--card:#FFFFFF;--ink:#000000;--sub:#6C6C70;--ter:#AEAEB2;--line:rgba(60,60,67,.14);--fill:rgba(120,120,128,.12);--fill2:rgba(120,120,128,.2);
+  --tint:#007AFF;--tintbg:rgba(0,122,255,.12);--green:#34C759;--orange:#FF9500;--red:#FF3B30;
+  --okt:#1F7A37;--midt:#A85400;--ngt:#C4180F;
+  --glass:rgba(249,249,251,.78);--glassline:rgba(60,60,67,.16);--shadow:0 1px 2px rgba(0,0,0,.04),0 6px 20px rgba(0,0,0,.05);
+  --soft:var(--bg);--btn:var(--tint);
+  color-scheme:light dark;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#000000;--card:#1C1C1E;--ink:#FFFFFF;--sub:#98989F;--ter:#636366;--line:rgba(84,84,88,.55);--fill:rgba(120,120,128,.24);--fill2:rgba(120,120,128,.36);
+  --tint:#0A84FF;--tintbg:rgba(10,132,255,.2);--green:#30D158;--orange:#FF9F0A;--red:#FF453A;
+  --okt:#4CD964;--midt:#FFB340;--ngt:#FF6961;
+  --glass:rgba(22,22,24,.74);--glassline:rgba(255,255,255,.1);--shadow:0 0 0 1px rgba(255,255,255,.04);
+}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Hiragino Sans','Noto Sans JP',sans-serif;color:var(--ink);background:var(--bg);-webkit-text-size-adjust:100%;-webkit-font-smoothing:antialiased;letter-spacing:-.01em}
+button{font-family:inherit;color:inherit;cursor:pointer;transition:transform .15s ease,opacity .15s ease,background-color .2s ease}
+button:active:not(:disabled){transform:scale(.97);opacity:.7}
+#app{max-width:480px;margin:0 auto;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
 #app.wide{max-width:1240px}
-/* パソコンでスマホ画面を見せる（プレゼン用）：画面中央にスマホの大きさの枠で表示 */
-body.phone{background:#0B0B0F;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
-body.phone #app{width:390px;max-width:390px;height:844px;max-height:94vh;min-height:0;margin:0;overflow-y:auto;border-radius:52px;border:12px solid #1C1C21;outline:2px solid #3A3A44;box-shadow:0 40px 120px rgba(41,151,255,.25);background:#fff;transform:translateZ(0)}
+#app.enter>main,#app.enter>.dash,#app.enter>.deck{animation:enter .32s cubic-bezier(.2,.8,.2,1)}
+@keyframes enter{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* パソコンでスマホ画面を見せる（プレゼン用） */
+body.phone{background:#0B0B0F;display:flex;align-items:center;justify-content:center;min-height:100vh}
+body.phone #app{width:390px;max-width:390px;height:844px;max-height:94vh;min-height:0;margin:0;overflow-y:auto;border-radius:52px;border:12px solid #1C1C21;outline:2px solid #3A3A44;box-shadow:0 40px 120px rgba(0,122,255,.25);background:var(--bg);transform:translateZ(0)}
 body.phone #app::-webkit-scrollbar{display:none}
 #pcback{display:none}
-body.phone #pcback{display:block;position:fixed;top:20px;left:20px;border:1px solid #3A3A44;background:#1C1C21;color:#E5E7EB;border-radius:999px;padding:10px 18px;font-size:14px;cursor:pointer}
-#app.wide>main:not(.dash){max-width:560px;width:100%;margin:0 auto}
-#app.wide>.foot{max-width:560px;width:100%;margin:0 auto}
-.bar{display:flex;align-items:center;gap:6px;padding:10px 24px;border-bottom:1px solid #EEE;position:sticky;top:0;background:#fff;z-index:2;flex-wrap:wrap}
-.bar b{font-size:15px;margin-right:auto}.bar button,.bar a{height:36px;padding:0 14px;border-radius:10px;border:0;background:none;font-size:14px;color:var(--ink);text-decoration:none;display:inline-flex;align-items:center}
-.bar .on{background:#F1F1EF;font-weight:600}.bar .new{background:var(--btn);color:#fff}
-.dash{padding:24px;display:flex;flex-direction:column;gap:20px}
-.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
-.cols{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:20px;align-items:start}
-.panel{border:1px solid var(--line);border-radius:18px;padding:16px;overflow-x:auto}
-.panel h3{margin:0 0 10px;font-size:13px;font-weight:500;color:var(--sub)}
-table.t{width:100%;border-collapse:collapse;font-size:13px}
-table.t th{text-align:left;font-weight:500;color:var(--sub);padding:8px;border-bottom:1px solid var(--line);vertical-align:bottom}
-table.t td{padding:10px 8px;border-bottom:1px solid #F3F4F6;overflow-wrap:anywhere}
-table.t td.n,table.t td:first-child{white-space:nowrap}
-table.t td.n{text-align:right;font-variant-numeric:tabular-nums}
-table.t tr.go{cursor:pointer}table.t tr.go:hover td{background:#FAFAFA}
-.pillc{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px}
-.ok{background:#DCFCE7;color:#166534}.mid{background:#FEF3C7;color:#92400E}.ng{background:#FDE2E1;color:#B42318}.gray{background:#F3F4F6;color:#4B5563}
-.alert{border:1px solid #FDE2E1;background:#FFF5F5;border-radius:14px;padding:12px 16px;font-size:13px;color:#B42318}
-@media (max-width:1100px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.cols{grid-template-columns:1fr}}
-header{display:flex;align-items:center;justify-content:space-between;padding:8px;padding-top:max(8px,env(safe-area-inset-top));border-bottom:1px solid #EEE;position:sticky;top:0;background:#fff;z-index:2}
-header .t{font-size:15px;font-weight:600;text-align:center;min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-header .t .s{overflow:hidden;text-overflow:ellipsis}
-header .s{font-size:11px;color:var(--sub)}
-.icon{width:44px;height:44px;border:0;background:none;font-size:20px;color:var(--ink)}
-main{flex:1;padding:20px;display:flex;flex-direction:column;gap:18px}
-.foot{padding:12px 20px max(28px,env(safe-area-inset-bottom));border-top:1px solid #EEE;display:flex;flex-direction:column;gap:8px;position:sticky;bottom:0;background:#fff}
-.btn{height:52px;border-radius:14px;border:0;background:var(--btn);color:#fff;font-size:16px;font-weight:600;width:100%}
-.btn:disabled{opacity:.35}
-.btn2{height:48px;border-radius:14px;border:1px solid var(--line);background:#fff;font-size:14px;width:100%;color:var(--ink)}
-.note{font-size:12px;color:var(--sub);text-align:center}
-label,.lab{font-size:13px;color:var(--sub);display:block;margin-bottom:6px}
-input,textarea,select{width:100%;border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:16px;font-family:inherit;color:var(--ink);background:#fff}
-textarea{min-height:120px;line-height:1.7}
+body.phone #pcback{display:block;position:fixed;top:20px;left:20px;border:1px solid #3A3A44;background:#1C1C21;color:#E5E7EB;border-radius:999px;padding:10px 18px;font-size:14px}
+
+/* ナビゲーションバー（すりガラス） */
+header,.bar,.foot{background:var(--glass);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px)}
+header{display:flex;align-items:center;justify-content:space-between;padding:4px 8px;padding-top:max(4px,env(safe-area-inset-top));border-bottom:.5px solid var(--glassline);position:sticky;top:0;z-index:3;min-height:52px}
+header .t{font-size:17px;font-weight:600;text-align:center;min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header .s{font-size:11px;font-weight:400;color:var(--sub);overflow:hidden;text-overflow:ellipsis}
+.icon{width:44px;height:44px;border:0;background:none;color:var(--tint);display:flex;align-items:center;justify-content:center;flex:none}
+/* 大きなタイトル（タブの最上位の画面） */
+.lt{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:max(20px,calc(env(safe-area-inset-top) + 12px)) 20px 4px}
+.lt small{display:block;font-size:13px;font-weight:600;color:var(--sub);margin-bottom:2px}
+.lt h1{margin:0;font-size:34px;font-weight:800;letter-spacing:-.02em;line-height:1.15}
+.avatar{width:40px;height:40px;border-radius:20px;border:0;background:linear-gradient(145deg,#5AC8FA,#007AFF);color:#fff;font-size:16px;font-weight:700;flex:none;margin-bottom:4px}
+
+main{flex:1;padding:16px;display:flex;flex-direction:column;gap:20px}
+.foot{padding:12px 16px max(20px,env(safe-area-inset-bottom));border-top:.5px solid var(--glassline);display:flex;flex-direction:column;gap:8px;position:sticky;bottom:0;z-index:2}
+
+/* タブバー（浮かぶガラスのカプセル） */
+.tabs{position:sticky;bottom:max(14px,env(safe-area-inset-bottom));z-index:3;margin:0 auto 14px;display:grid;grid-template-columns:repeat(3,92px);gap:2px;padding:5px;border-radius:999px;background:var(--glass);-webkit-backdrop-filter:saturate(200%) blur(24px);backdrop-filter:saturate(200%) blur(24px);border:.5px solid var(--glassline);box-shadow:0 8px 30px rgba(0,0,0,.14),inset 0 1px 0 rgba(255,255,255,.35)}
+.tabs button{height:52px;border:0;background:none;border-radius:999px;font-size:10px;font-weight:600;color:var(--sub);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.tabs button svg{width:24px;height:24px}
+.tabs button.on{color:var(--tint);background:var(--fill)}
+
+/* ボタン */
+.btn{height:50px;border-radius:14px;border:0;background:var(--tint);color:#fff;font-size:17px;font-weight:600;width:100%}
+.btn:disabled{opacity:.4}
+.btn2{height:50px;border-radius:14px;border:0;background:var(--fill);font-size:17px;font-weight:500;width:100%;color:var(--tint)}
+.note{font-size:13px;color:var(--sub);text-align:center}
+.err{color:var(--red);font-size:13px}
+.ver{margin:4px 0 0;text-align:center;font-size:11px;color:var(--ter);letter-spacing:.04em}
+
+/* 入力 */
+label,.lab{font-size:13px;color:var(--sub);display:block;margin:0 0 6px 4px}
+input,textarea,select{width:100%;border:0;border-radius:12px;padding:12px 14px;font-size:17px;font-family:inherit;color:var(--ink);background:var(--card);outline:0;transition:box-shadow .2s ease}
+input:focus,textarea:focus,select:focus{box-shadow:0 0 0 3px var(--tintbg),0 0 0 1px var(--tint)}
+input::placeholder,textarea::placeholder{color:var(--ter)}
+textarea{min-height:120px;line-height:1.6}
 /* 入力欄の高さをそろえる。iPhoneの日付・日時欄は中身に合わせて広がり、隣の欄にはみ出すので幅を固定する */
 input,select{height:48px;min-width:0;max-width:100%;-webkit-appearance:none;appearance:none}
-input[type=checkbox]{height:auto;-webkit-appearance:auto;appearance:auto}
+input[type=checkbox]{height:auto;width:auto;-webkit-appearance:auto;appearance:auto;accent-color:var(--tint)}
+input[type=search]{background:var(--fill);height:40px;border-radius:11px;font-size:16px}
 input[type=date],input[type=datetime-local]{display:block;width:100%;text-align:left;line-height:22px}
 input::-webkit-date-and-time-value{text-align:left;margin:0}
 input::-webkit-datetime-edit{padding:0}
 select{background-image:linear-gradient(45deg,transparent 50%,var(--sub) 50%),linear-gradient(135deg,var(--sub) 50%,transparent 50%);background-position:calc(100% - 20px) 21px,calc(100% - 15px) 21px;background-size:5px 5px;background-repeat:no-repeat;padding-right:36px}
 .row>*{min-width:0}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.req::after{content:' ＊';color:var(--red);font-weight:700}
+.reqnote{font-size:13px;color:var(--sub)}.reqnote b{color:var(--red)}
+
+/* 選択（チップ・セグメント） */
 .pills{display:flex;gap:8px;flex-wrap:wrap}
-.pill{height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:#fff;font-size:13px;color:var(--ink)}
-.pill.on{background:var(--btn);color:#fff;border-color:var(--btn)}
-.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.seg2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.seg button,.seg2 button{height:44px;border-radius:14px;border:1px solid var(--line);background:#fff;font-size:14px;color:var(--ink)}
-.seg button.on,.seg2 button.on{background:var(--btn);color:#fff;border-color:var(--btn)}
-.sw{display:flex;justify-content:space-between;align-items:center;min-height:44px;border-bottom:1px solid #F0F0F0;font-size:14px;color:var(--ink);margin:0}
-.sw input{width:auto}
-.item{display:block;width:100%;text-align:left;padding:16px;border:1px solid var(--line);border-radius:18px;background:#fff;color:var(--ink);font-size:15px}
-.item small{display:block;color:var(--sub);font-size:12px;margin-top:4px}
-.h2{margin:0;font-size:13px;font-weight:500;color:var(--sub);display:flex;justify-content:space-between}
-.mrow{position:relative;overflow:hidden;border-radius:10px}.mdel{position:absolute;right:0;top:0;bottom:0;width:80px;border:0;background:#B42318;color:#fff;font-size:14px;visibility:hidden}
-.memo{display:flex;gap:12px;font-size:14px;line-height:1.6;background:#fff;position:relative;padding:6px 0;transition:transform .2s;touch-action:pan-y}.memo span{font-size:12px;color:#9CA3AF;width:36px;flex:none}
-.add{display:flex;gap:8px}.add input{flex:1}.add button{width:64px;border-radius:14px;border:0;background:#F3F4F6;font-size:14px}
-.drop{display:flex;align-items:center;justify-content:center;height:96px;border:1px dashed #C7CCD4;border-radius:14px;font-size:14px;color:var(--sub);text-align:center;padding:8px}
+.pill{height:36px;padding:0 14px;border-radius:999px;border:0;background:var(--card);font-size:15px;color:var(--ink)}
+.pill.on{background:var(--tint);color:#fff}
+.seg,.seg2{display:grid;gap:0;background:var(--fill);padding:2px;border-radius:10px}
+.seg{grid-template-columns:repeat(3,1fr)}.seg2{grid-template-columns:1fr 1fr}
+.seg button,.seg2 button{height:36px;border-radius:8px;border:0;background:none;font-size:14px;font-weight:500;color:var(--ink)}
+.seg button.on,.seg2 button.on{background:var(--card);font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.14)}
+@media (prefers-color-scheme:dark){.seg button.on,.seg2 button.on{background:#636366}}
+.sw{display:flex;justify-content:space-between;align-items:center;min-height:48px;border-bottom:.5px solid var(--line);font-size:17px;color:var(--ink);margin:0}
+.sw input[type=checkbox]{-webkit-appearance:none;appearance:none;width:51px;height:31px;border-radius:16px;background:var(--fill2);position:relative;flex:none;padding:0;transition:background-color .25s ease;cursor:pointer}
+.sw input[type=checkbox]::after{content:'';position:absolute;left:2px;top:2px;width:27px;height:27px;border-radius:14px;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.2);transition:transform .25s cubic-bezier(.2,.8,.2,1)}
+.sw input[type=checkbox]:checked{background:var(--green)}.sw input[type=checkbox]:checked::after{transform:translateX(20px)}
 .chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
-.chip{flex:none;padding:6px 10px;border:1px solid var(--line);border-radius:999px;font-size:13px}
-.deck{position:relative;flex:1;background:#FAFAFA;padding:20px}
-.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px;display:flex;flex-direction:column;gap:14px;touch-action:pan-y;transition:transform .2s}
-.card .co{font-size:12px;color:var(--sub)}.card .nm{font-size:22px;font-weight:700}
-.tags{display:flex;gap:6px;flex-wrap:wrap}
-.tag{padding:4px 8px;border-radius:999px;border:1px solid var(--line);font-size:12px}.tag.k{background:#F1F1EF;border-color:#F1F1EF;font-weight:600}
-.kv{display:flex;justify-content:space-between;font-size:13px;padding:10px 0;border-top:1px solid #F0F0F0;border-bottom:1px solid #F0F0F0;gap:12px}.kv span:first-child{color:var(--sub);flex:none}
-.mail{font-size:13px;line-height:1.7;color:#374151;white-space:pre-wrap;max-height:180px;overflow:hidden}
-.reason{font-size:12px;color:var(--sub)}
-.acts{display:flex;justify-content:center;gap:40px;padding:16px 0 4px}
-.round{width:64px;height:64px;border-radius:32px;border:1px solid var(--line);background:#fff;font-size:22px}
-.round.ok{background:var(--btn);color:#fff;border:0}
-.big{font-size:48px;font-weight:700}
-.th{width:44px;height:30px;object-fit:cover;border-radius:6px;border:1px solid var(--line);flex:none;background:#F3F4F6}.crow{background:#fff;position:relative;transition:transform .2s;touch-action:pan-y;cursor:pointer}.crow .cn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.cardimg{width:100%;max-height:260px;object-fit:contain;border-radius:12px;border:1px solid var(--line);background:#F9FAFB}
-.line{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #F0F0F0;font-size:14px;gap:8px}
+.chip{flex:none;padding:6px 12px;background:var(--card);border-radius:999px;font-size:14px}
+
+/* リスト */
+.h2{margin:4px 4px -8px;font-size:20px;font-weight:700;display:flex;justify-content:space-between;align-items:baseline;letter-spacing:-.01em}
+.h2 span+span{font-size:13px;font-weight:400;color:var(--sub)}
+.h2+.mail,.h2+p,.h2+.line{margin-top:6px}
+.item{position:relative;display:block;width:100%;text-align:left;padding:14px 40px 14px 16px;border:0;border-radius:14px;background:var(--card);color:var(--ink);font-size:17px;font-weight:500;box-shadow:var(--shadow);line-height:1.35}
+button.item::after{content:'';position:absolute;right:16px;top:50%;width:8px;height:8px;border-right:2px solid var(--ter);border-top:2px solid var(--ter);transform:translateY(-50%) rotate(45deg)}
+.item small{display:block;color:var(--sub);font-size:13px;font-weight:400;margin-top:3px}
+div.item{box-shadow:none;background:var(--fill)}
+main>.item+.item,#list>.item+.item,#llist>.item+.item{margin-top:-10px}
+#list,#llist{display:flex;flex-direction:column;gap:20px}
+.line{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:.5px solid var(--line);font-size:16px;gap:10px}
 .line>:first-child{min-width:0;overflow-wrap:anywhere}.line>:last-child:not(:first-child){flex:none}
-.line button{height:36px;border-radius:999px;border:1px solid var(--line);background:#fff;padding:0 12px;font-size:12px}
-#sync{position:fixed;top:10px;right:10px;background:#F3F4F6;color:#4B5563;font-size:12px;padding:4px 10px;border-radius:999px;z-index:9;display:none}
-#toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%);background:#191919;color:#fff;padding:10px 16px;border-radius:14px;font-size:14px;display:none;max-width:90%;z-index:9}
-.err{color:#B42318;font-size:12px}
-.ver{margin:8px 0 0;text-align:center;font-size:11px;color:#B0B4BA;letter-spacing:.04em}
-.stat.hot{border-color:#191919}.todo{background:#FFF7E6;border:1.5px solid #F5B54A;border-radius:18px;padding:14px 16px;scroll-margin-top:80px}.todo h3{margin:0 0 6px;font-size:16px;display:flex;align-items:baseline;gap:8px}.todo h3 small{font-size:12px;color:#92400E;font-weight:400}.titem{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #F7D9A8}.titem:first-of-type{border-top:0}.titem .due{flex:none;font-size:12px;font-weight:700;color:#92400E;background:#FDE7C2;border-radius:8px;padding:4px 8px}.titem .due.late{background:#FDE2E1;color:#B42318}.titem .tbody{flex:1;min-width:0;font-size:14px;line-height:1.5;cursor:pointer}.titem .tbody b{display:block;font-size:15px}.titem button{flex:none;border:1px solid #F5B54A;background:#fff;border-radius:999px;padding:8px 12px;font-size:13px;color:#92400E}
-.stat{font:inherit;text-align:left;background:#fff;color:inherit;cursor:pointer;border:1px solid var(--line);border-radius:18px;padding:14px 16px;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}.stat span{width:100%;font-size:12px;color:var(--sub)}.stat b{font-size:28px}.stat small{font-size:13px;color:var(--sub)}
-.tabs{position:sticky;bottom:0;display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid #EEE;background:#fff;padding:6px 8px 20px}.tabs button{height:48px;border:0;background:none;font-size:14px;color:var(--ink)}
-.req::after{content:' ＊';color:#B42318;font-weight:700}
-.reqnote{font-size:12px;color:var(--sub)}.reqnote b{color:#B42318}
-.shim{background:linear-gradient(90deg,#9CA3AF 0%,#D1D5DB 40%,#9CA3AF 80%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shim 1.4s linear infinite}
+.line button{height:34px;border-radius:999px;border:0;background:var(--fill);color:var(--tint);padding:0 14px;font-size:14px;font-weight:500}
+.kv{display:flex;justify-content:space-between;font-size:15px;padding:12px 0;border-top:.5px solid var(--line);border-bottom:.5px solid var(--line);gap:12px}.kv span:first-child{color:var(--sub);flex:none}
+
+/* 名刺の一覧（1つのグループにまとめる） */
+#cards{background:var(--card);border-radius:14px;padding:0 14px;box-shadow:var(--shadow);overflow:hidden}
+#cards:empty{display:none}
+#cards .line:last-child,#cards .mrow:last-child .line{border-bottom:0}
+.mrow{position:relative;overflow:hidden}.mdel{position:absolute;right:-14px;top:0;bottom:0;width:94px;border:0;background:var(--red);color:#fff;font-size:15px;font-weight:500;visibility:hidden}
+.th{width:48px;height:32px;object-fit:cover;border-radius:6px;flex:none;background:var(--fill)}
+.crow{background:var(--card);position:relative;transition:transform .25s cubic-bezier(.2,.8,.2,1);touch-action:pan-y;cursor:pointer}
+.crow .cn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500}
+.cardimg{width:100%;max-height:260px;object-fit:contain;border-radius:14px;background:var(--card);box-shadow:var(--shadow)}
+.memo{display:flex;gap:12px;font-size:16px;line-height:1.5;background:var(--bg);position:relative;padding:8px 0;transition:transform .25s cubic-bezier(.2,.8,.2,1);touch-action:pan-y}.memo span{font-size:13px;color:var(--ter);width:40px;flex:none;padding-top:2px}
+.add{display:flex;gap:8px}.add input{flex:1}.add button{width:64px;border-radius:12px;border:0;background:var(--fill);color:var(--tint);font-size:16px;font-weight:600}
+.tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{padding:4px 10px;border-radius:999px;background:var(--fill);font-size:12px;font-weight:500;color:var(--sub)}.tag.k{background:var(--tintbg);color:var(--tint);font-weight:600}
+
+/* 取り込み（タップする場所と、読み取り中のカード） */
+.drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:104px;border:1.5px dashed color-mix(in srgb,var(--tint) 45%,transparent);border-radius:16px;background:var(--tintbg);font-size:15px;font-weight:600;color:var(--tint);text-align:center;padding:14px;margin:0;cursor:pointer;transition:background-color .2s}
+.drop small{font-size:12px;font-weight:400;color:var(--sub)}
+.drop svg{width:30px;height:30px}
+.drop.busy{border:0;background:var(--card);box-shadow:var(--shadow);flex-direction:row;justify-content:flex-start;gap:14px;text-align:left;color:var(--ink);padding:14px 16px}
+.drop.busy>span{flex:1;min-width:0}
+.spin{width:34px;height:34px;flex:none;border-radius:50%;border:3.5px solid var(--fill2);border-top-color:var(--tint);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.prog{height:5px;border-radius:3px;background:var(--fill2);overflow:hidden;margin-top:8px}.prog i{display:block;height:5px;border-radius:3px;background:var(--tint);width:0;transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.shim{display:inline-block;width:62%;height:12px;border-radius:6px;background:linear-gradient(90deg,var(--fill) 0%,var(--fill2) 45%,var(--fill) 90%);background-size:200% 100%;animation:shim 1.3s linear infinite;vertical-align:middle}
 @keyframes shim{from{background-position:200% 0}to{background-position:-200% 0}}
-.up-run .th{opacity:.6}.up-ng .cn{color:#B42318}
-@keyframes flash{from{background:#EAF3FF}to{background:#fff}}.up-done{animation:flash 1.2s ease-out}
-.prog{height:4px;border-radius:2px;background:#EEE;overflow:hidden}.prog i{display:block;height:4px;background:#191919;width:0;transition:width 1s linear}
-.up{display:flex;align-items:center;gap:12px;padding:6px 0;font-size:13px}.up img{width:56px;height:40px;object-fit:cover;border-radius:8px;border:1px solid var(--line);flex:none}
+.up-run .th{opacity:.55}.up-ng .cn{color:var(--red)}
+@keyframes flash{from{background:var(--tintbg)}to{background:var(--card)}}.up-done{animation:flash 1.4s ease-out}
+.up{display:flex;align-items:center;gap:12px;padding:6px 0;font-size:13px}.up img{width:56px;height:40px;object-fit:cover;border-radius:8px;flex:none}
+
+/* ホーム */
+.stat{font:inherit;text-align:left;background:var(--card);color:inherit;border:0;border-radius:16px;padding:14px 16px;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;box-shadow:var(--shadow)}
+.stat span{width:100%;font-size:13px;font-weight:600;color:var(--sub);display:flex;align-items:center;gap:6px}
+.stat span::before{content:'';width:8px;height:8px;border-radius:4px;background:var(--ter)}
+.stat b{font-size:34px;font-weight:700;letter-spacing:-.02em;font-feature-settings:'tnum'}.stat small{font-size:15px;color:var(--sub)}
+.stat.hot span::before{background:var(--orange)}.stat.hot:first-child span::before{background:var(--tint)}
+.todo{background:var(--card);border-radius:16px;padding:14px 16px 4px;scroll-margin-top:80px;box-shadow:var(--shadow)}
+.todo h3{margin:0 0 4px;font-size:20px;font-weight:700;display:flex;align-items:baseline;gap:8px}.todo h3 small{font-size:13px;color:var(--sub);font-weight:400}
+.titem{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:.5px solid var(--line)}.titem:first-of-type{border-top:0}
+.titem .due{flex:none;font-size:12px;font-weight:700;color:var(--midt);background:color-mix(in srgb,var(--orange) 16%,transparent);border-radius:8px;padding:4px 8px}
+.titem .due.late{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--ngt)}
+.titem .tbody{flex:1;min-width:0;font-size:14px;line-height:1.4;color:var(--sub);cursor:pointer}.titem .tbody b{display:block;font-size:16px;font-weight:600;color:var(--ink)}
+.titem button{flex:none;border:0;background:var(--fill);border-radius:999px;padding:8px 14px;font-size:14px;font-weight:500;color:var(--tint)}
+
+/* 確認と承認 */
+.deck{position:relative;flex:1;padding:16px}
+.card{background:var(--card);border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:14px;touch-action:pan-y;transition:transform .25s cubic-bezier(.2,.8,.2,1);box-shadow:0 2px 6px rgba(0,0,0,.05),0 14px 40px rgba(0,0,0,.09)}
+.card .co{font-size:13px;color:var(--sub)}.card .nm{font-size:26px;font-weight:700;letter-spacing:-.02em}
+.card .lab{margin-left:0}
+.mail{font-size:14px;line-height:1.7;color:var(--ink);white-space:pre-wrap;max-height:180px;overflow:hidden;background:var(--fill);border-radius:12px;padding:12px 14px;-webkit-mask-image:linear-gradient(#000 70%,transparent);mask-image:linear-gradient(#000 70%,transparent)}
+.reason{font-size:13px;color:var(--sub)}
+.acts{display:flex;justify-content:center;gap:44px;padding:8px 0 4px}
+.round{width:64px;height:64px;border-radius:32px;border:0;background:var(--fill2);color:var(--ink);display:flex;align-items:center;justify-content:center}
+.round svg{width:28px;height:28px}
+.round.ok{background:var(--green);color:#fff;box-shadow:0 8px 24px color-mix(in srgb,var(--green) 45%,transparent)}
+.big{font-size:56px;font-weight:700;letter-spacing:-.03em;font-feature-settings:'tnum'}
+.steps{height:4px;background:var(--fill2)}.steps i{display:block;height:4px;background:var(--tint);border-radius:0 2px 2px 0;transition:width .4s cubic-bezier(.2,.8,.2,1)}
+
+/* お知らせ */
+#sync{position:fixed;top:max(10px,env(safe-area-inset-top));right:10px;background:var(--glass);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);color:var(--sub);font-size:12px;padding:5px 12px;border-radius:999px;z-index:9;display:none;border:.5px solid var(--glassline)}
+#toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);background:rgba(44,44,46,.88);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);color:#fff;padding:11px 18px;border-radius:999px;font-size:15px;font-weight:500;display:none;max-width:90%;z-index:9;box-shadow:0 8px 30px rgba(0,0,0,.25);animation:enter .25s cubic-bezier(.2,.8,.2,1);text-align:center}
+.alert{background:color-mix(in srgb,var(--red) 10%,var(--card));border-radius:14px;padding:12px 16px;font-size:14px;color:var(--ngt)}
+.pillc{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.ok{background:color-mix(in srgb,var(--green) 16%,transparent);color:var(--okt)}.mid{background:color-mix(in srgb,var(--orange) 16%,transparent);color:var(--midt)}.ng{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--ngt)}.gray{background:var(--fill);color:var(--sub)}
+
+/* パソコン */
+#app.wide>main:not(.dash){max-width:560px;width:100%;margin:0 auto}
+#app.wide>.foot{max-width:560px;width:100%;margin:0 auto;background:none;-webkit-backdrop-filter:none;backdrop-filter:none;border:0}
+.bar{display:flex;align-items:center;gap:4px;padding:10px 24px;border-bottom:.5px solid var(--glassline);position:sticky;top:0;z-index:3;flex-wrap:wrap}
+.bar b{font-size:17px;font-weight:700;margin-right:auto}.bar b small{font-weight:400}
+.bar button,.bar a{height:34px;padding:0 14px;border-radius:999px;border:0;background:none;font-size:14px;font-weight:500;color:var(--ink);text-decoration:none;display:inline-flex;align-items:center}
+.bar .on{background:var(--fill);font-weight:600}.bar .new{background:var(--tint);color:#fff;font-weight:600}
+.dash{padding:24px;display:flex;flex-direction:column;gap:20px}
+.kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+.cols{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:20px;align-items:start}
+.panel{background:var(--card);border-radius:18px;padding:18px;overflow-x:auto;box-shadow:var(--shadow)}
+.panel h3{margin:0 0 10px;font-size:17px;font-weight:700}
+table.t{width:100%;border-collapse:collapse;font-size:14px}
+table.t th{text-align:left;font-size:12px;font-weight:600;color:var(--sub);padding:8px;border-bottom:.5px solid var(--line);vertical-align:bottom}
+table.t td{padding:11px 8px;border-bottom:.5px solid var(--line);overflow-wrap:anywhere}
+table.t tr:last-child td{border-bottom:0}
+table.t td.n,table.t td:first-child{white-space:nowrap}
+table.t td.n{text-align:right;font-variant-numeric:tabular-nums}
+table.t tr.go{cursor:pointer}table.t tr.go:hover td{background:var(--fill)}
+table.t input,table.t select{background:var(--fill)}
+@media (max-width:1100px){.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.cols{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -127,7 +222,7 @@ select{background-image:linear-gradient(45deg,transparent 50%,var(--sub) 50%),li
 <script>
 // 通信先：Apps Script。画面がGitHub Pagesにあるときは fetch、Apps Script上で開いたときは google.script.run
 // バージョン：直したら上げる（大きな機能追加は 1.x、小さな修正は 1.0.x）
-const VERSION = '1.4.0';
+const VERSION = '2.0.0';
 const ver = () => `<p class="ver">MW Desk v${VERSION}</p>`;
 const API_URL = 'https://mw-desk.miraiway.workers.dev';
 const store = { get: k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } },
@@ -150,7 +245,8 @@ const BLOCKS = {'03':{A:'A 全体',B:'B 人材',C:'C 制作',D:'D 日本語教�
 const needsSched = c => c.scene === '03' || (c.scene === '04' && c.block === '2');
 const jpDate = d => { const x = new Date(d + 'T12:00:00'); return `${x.getMonth()+1}月${x.getDate()}日（${'日月火水木金土'[x.getDay()]}）`; };
 let SCR = 0; // 画面を描くたびに増える。古い通信の結果で、もう離れた画面を描き直さないため
-const view = (h, wide = false, keepScroll = false) => { SCR++; const a = $('#app'); a.className = wide ? 'wide' : ''; const y = scrollY, ay = a.scrollTop; a.innerHTML = h; window.scrollTo(0, keepScroll ? y : 0); a.scrollTop = keepScroll ? ay : 0; };
+let LASTV = 0;
+const view = (h, wide = false, keepScroll = false) => { SCR++; const a = $('#app'), now = Date.now(); a.className = (wide ? 'wide' : '') + (!keepScroll && now - LASTV > 700 ? ' enter' : ''); LASTV = now; const y = scrollY, ay = a.scrollTop; a.innerHTML = h; window.scrollTo(0, keepScroll ? y : 0); a.scrollTop = keepScroll ? ay : 0; };
 
 // ── 速さの工夫1：一度見た画面は端末に覚えておき、すぐ表示 → 裏で最新を取って差し替える
 const ckey = k => 'c:' + K.slice(0, 8) + ':' + k;
@@ -196,7 +292,25 @@ function phoneMode(on) { store.set('mw_phone', on ? '1' : ''); location.reload()
 const oops = (e, retry) => view(`<main><p class="err" style="font-size:14px">${esc(e.message || e)}</p><button class="btn2" onclick="${retry}">もう一度読み込む</button></main>`);
 const STATUS = { draft: '未承認', approved: '予約済', sent: '送信済' };
 const sendDay = () => { const n = new Date(); return n.getHours() * 60 + n.getMinutes() < 390 ? '今日' : '明日'; };
-const head = (t, s, back) => `<header><button class="icon" aria-label="戻る" onclick="${back || ''}" ${back ? '' : 'style="visibility:hidden"'}>‹</button><div class="t">${esc(t)}${s ? `<div class="s">${esc(s)}</div>` : ''}</div><span style="width:44px"></span></header>`;
+// アイコン（線画。24pxの枠）
+const svg = (d, w = 2) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const IC = {
+  back: '<path d="M15 4 7 12l8 8"/>',
+  home: '<path d="M3 11 12 3l9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  leads: '<path d="M10 6h10M10 12h10M10 18h10"/><path d="m3 6 1.5 1.500L7 5M3 12l1.5 1.500L7 11M3 18l1.5 1.500L7 17"/>',
+  people: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-3.5 3-5.5 6.5-5.500s6 2 6.5 5.5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17.5 14.500c2.2 0 3.7 1.5 4 4"/>',
+  camera: '<path d="M4 8h3l1.5-2.500h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/>',
+  check: '<path d="m5 12.5 4.5 4.500L19 7"/>',
+  pencil: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',
+};
+// 軽い振動（Android は vibrate、iPhone は見えないスイッチを切り替えて触覚を出す）
+const HAP = (() => { const l = document.createElement('label'), i = document.createElement('input'); i.type = 'checkbox'; i.setAttribute('switch', ''); l.style.display = 'none'; l.appendChild(i); document.body.appendChild(l); return l; })();
+const haptic = () => { try { navigator.vibrate ? navigator.vibrate(8) : HAP.click(); } catch (e) {} };
+// 最上位の画面：大きなタイトルと、下に浮かぶタブバー
+const large = (t, s, right = '') => `<div class="lt"><div>${s ? `<small>${esc(s)}</small>` : ''}<h1>${esc(t)}</h1></div>${right}</div>`;
+const tabs = on => `<nav class="tabs" aria-label="メニュー">${[['home', 'ホーム', 'home()'], ['leads', 'リード', 'leads()'], ['people', '相手一覧', 'contacts()']]
+  .map(([k, t, fn]) => `<button class="${k === on ? 'on' : ''}" ${k === on ? 'aria-current="page"' : ''} onclick="haptic();${fn}">${svg(IC[k])}${t}</button>`).join('')}</nav>`;
+const head = (t, s, back) => `<header><button class="icon" aria-label="戻る" onclick="${back || ''}" ${back ? '' : 'style="visibility:hidden"'}>${svg(IC.back, 2.6)}</button><div class="t">${esc(t)}${s ? `<div class="s">${esc(s)}</div>` : ''}</div><span style="width:44px"></span></header>`;
 
 // ───── ホーム ─────
 // ───── ログイン（名前を選んで暗証番号。この端末に記憶） ─────
@@ -252,7 +366,8 @@ function goDrafts() {
 }
 function renderHome() {
   const sum = S.sum;
-  view(head('MW Desk', S.me) + `<main>
+  const d = new Date();
+  view(large('MW Desk', `${d.getMonth() + 1}月${d.getDate()}日 ${'日月火水木金土'[d.getDay()]}曜日`, `<button class="avatar" aria-label="設定（${esc(S.me)}）" onclick="settings()">${esc((S.me || '?')[0])}</button>`) + `<main>
     <button class="btn" onclick="newEvent()">＋ イベント作成</button>
     <div class="row">
       <button class="stat ${sum.drafts ? 'hot' : ''}" onclick="goDrafts()"><span>承認待ち</span><b>${sum.drafts}</b><small>件</small></button>
@@ -261,7 +376,7 @@ function renderHome() {
     ${sum.actions.length ? `<section class="todo" id="todo"><h3>次にやること<small>7日以内・期限切れ</small></h3>${sum.actions.map(a => `<div class="titem"><span class="due ${a.late ? 'late' : ''}">${a.late ? '期限切れ' : a.due ? esc(a.due.slice(5).replace('-', '/')) + 'まで' : '期限なし'}</span><span class="tbody" onclick="contact('${a.id}')"><b>${esc(a.next)}</b>${esc(a.company)} ${esc(a.name)}</span><button onclick="actDone('${a.id}')">済にする</button></div>`).join('')}</section>` : ''}
     <div class="h2">自分のイベント</div>
     ${S.events.map(e => `<button class="item" onclick="openEvent('${e.id}')">${esc(e.name)}${sum.draftsBy[e.id] ? ` <span class="tag k">承認待ち ${sum.draftsBy[e.id]}</span>` : ''}<small>${jpDate(e.date)}・${esc(e.members.join('、'))}</small></button>`).join('') || '<p class="note">まだありません</p>'}
-  ${ver()}</main><nav class="tabs"><button onclick="leads()">リード</button><button onclick="contacts()">相手一覧</button><button onclick="settings()">設定</button><button onclick="login()">切り替え</button></nav>`);
+  ${ver()}</main>${tabs('home')}`);
 }
 function actDone(id) {
   const before = S.sum.actions;
@@ -315,14 +430,14 @@ const NEXTS = ['アポ打診', '紹介', '資料送付', 'その他', 'なし'];
 const LF = { q: '', by: '', show: 'todo' }; // 絞り込み（画面を移っても覚えておく）
 function leads() {
   const wide = WIDE();
-  view((wide ? bar('leads') : head('リード', '次にやることの一覧', 'home()')) + `<main${wide ? ' class="dash"' : ''}>
+  view((wide ? bar('leads') : large('リード', '次にやることの一覧')) + `<main${wide ? ' class="dash"' : ''}>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <input id="lq" type="search" placeholder="社名・氏名・イベントで検索" value="${esc(LF.q)}" aria-label="検索" style="flex:2;min-width:200px">
       <select id="lby" aria-label="担当" style="flex:1;min-width:120px"><option value="">担当：全員</option>${S.members.map(m => `<option ${LF.by === m ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select>
       <select id="lshow" aria-label="表示" style="flex:1;min-width:140px">${[['todo', '要対応'], ['late', '期限切れ'], ['done', '済'], ['all', 'すべて']].map(([v, t]) => `<option value="${v}" ${LF.show === v ? 'selected' : ''}>${t}</option>`).join('')}</select>
     </div>
     <div id="lsum" class="note" style="text-align:left"></div>
-    <div id="llist"><p class="note">読み込み中…</p></div></main>`, wide);
+    <div id="llist"><p class="note">読み込み中…</p></div></main>${wide ? '' : tabs('leads')}`, wide);
   const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
   let all = cget('leads') || null;
   const paint = () => {
@@ -338,7 +453,7 @@ function leads() {
     $('#llist').innerHTML = !ls.length ? '<p class="note">該当するリードはありません</p>' : wide
       ? `<div class="panel"><table class="t"><tr><th>済</th><th>期限</th><th>次にやること</th><th>相手</th><th>担当</th><th>状態</th><th>区分</th><th>熱い理由</th><th>イベント</th></tr>${ls.map(l => `<tr data-l="${l.id}" style="${l.nextDone ? 'opacity:.5' : ''}">
           <td><input type="checkbox" class="ldone" ${l.nextDone ? 'checked' : ''} aria-label="済"></td>
-          <td><input type="date" class="ldue" value="${esc(l.due)}" aria-label="期限" style="height:36px;min-width:150px;font-size:14px;padding:0 10px;${late(l) ? 'color:#B42318;border-color:#F5B5B0' : ''}"></td>
+          <td><input type="date" class="ldue" value="${esc(l.due)}" aria-label="期限" style="height:36px;min-width:150px;font-size:14px;padding:0 10px;${late(l) ? 'color:var(--red)' : ''}"></td>
           <td><select class="lnext" aria-label="次にやること" style="height:36px;font-size:14px;padding:0 30px 0 10px;min-width:120px">${NEXTS.map(n => `<option ${n === l.next ? 'selected' : ''}>${n}</option>`).join('')}</select></td>
           <td><a href="#" onclick="contact('${l.id}');return false" style="color:inherit;text-decoration:none"><b>${esc(l.company || '社名未読取')}</b><br>${esc(l.name)}</a></td>
           <td>${esc(l.by)}</td><td>${STATUS[l.status] || ''}</td><td>${esc(l.target)}</td>
@@ -369,9 +484,9 @@ function leads() {
 // ───── 相手一覧 ─────
 async function contacts(q = '') {
   const wide = WIDE();
-  view((wide ? bar('contacts') : head('相手一覧', 'チーム全員分', 'home()')) + `<main${wide ? ' class="dash"' : ''}>
+  view((wide ? bar('contacts') : large('相手一覧', 'チーム全員分')) + `<main${wide ? ' class="dash"' : ''}>
     <input id="q" type="search" placeholder="社名・氏名・イベント・担当で検索" value="${esc(q)}" aria-label="検索">
-    <div id="list"><p class="note">読み込み中…</p></div></main>`, wide);
+    <div id="list"><p class="note">読み込み中…</p></div></main>${wide ? '' : tabs('people')}`, wide);
   let t; $('#q').oninput = () => { clearTimeout(t); t = setTimeout(() => load($('#q').value), 300); };
   const paint = cs => {
       if (!$('#list')) return;
@@ -415,6 +530,7 @@ function renderSettings(st) {
     <div><label for="sns">SNS</label><input id="sns" value="${esc(st.sns)}" placeholder="例）Instagram：@miraiway"></div>
     <div><div class="h2">署名のプレビュー</div><div class="mail" style="max-height:none">${esc(st.preview)}</div></div>
     <span class="note">氏名を変えるときは、管理者が members シートで直します</span>
+    <button class="btn2" onclick="login()">メンバーを切り替える</button>
   </main><div class="foot"><button class="btn" id="go">保存する</button></div>`, WIDE());
   $('#go').onclick = async () => {
     $('#go').disabled = true;
@@ -462,7 +578,7 @@ function renderEvent(keepScroll = false) {
   view(head(ev.name, jpDate(ev.date), 'home()') + `<main>
     ${steps(ev, cards)}
     <div class="h2"><span>名刺・写真</span><span>名刺 ${cards.length}・写真 ${ev.photos}</span></div>
-    <label class="drop" for="up" id="dropt">${upLabel(id)}</label>
+    <label class="drop${upBusy(id) ? ' busy' : ''}" for="up" id="dropt">${upLabel(id)}</label>
     <input id="up" type="file" accept="image/*,.heic,.heif" multiple style="display:none">
     <div id="cards">${(UPQ[id] || []).map(upRow).join('')}
     ${cards.map(c => `<div class="mrow"><button class="mdel" onclick="delCard('${c.id}')">削除</button><div class="line crow" data-c="${c.id}" onclick="openCard('${c.id}')">${thumb(c, 'th')}<span class="cn">${esc(c.company || '社名未読取')} ${esc(c.name)}</span><span class="tag">${STATUS[c.status]}</span></div></div>`).join('')}</div>
@@ -497,16 +613,21 @@ function renderEvent(keepScroll = false) {
 // 選んだ瞬間に一覧へ「読み取り中」の行を出し、裏で3枚ずつAIに送る。終わった行から社名・氏名に変わる
 const UPQ = {}; // イベントごとの取り込み待ち・読み取り中
 let UPN = 0, UPWORK = 0;
+const UPS = {}; // 今回の取り込みの合計と、終わった枚数
+const upBusy = id => (UPQ[id] || []).some(u => u.st !== 'ng');
 const upLabel = id => {
-  const q = UPQ[id] || [], left = q.filter(u => u.st !== 'ng').length;
-  return left ? `<span><b>AIが読み取り中… 残り ${left}枚</b><br><small>このまま操作を続けられます。追加もできます</small></span>` : '<span>＋ 名刺と写真をまとめて選ぶ<br>（区別しなくてOK）</span>';
+  const st = UPS[id] || { total: 0, done: 0 };
+  return upBusy(id)
+    ? `<i class="spin" role="progressbar" aria-label="読み取り中"></i><span><b>AIが名刺を読み取っています</b><br><small>${st.done} / ${st.total}枚 完了・このまま操作を続けられます</small><div class="prog"><i style="width:${Math.max(6, 100 * st.done / (st.total || 1))}%"></i></div></span>`
+    : `${svg(IC.camera, 1.7)}<span>名刺と写真をまとめて選ぶ<br><small>名刺か写真かは AI が見分けます</small></span>`;
 };
 const upRow = u => u.st === 'ng'
   ? `<div class="line crow up-ng" id="u${u.n}" onclick="retryUp(${u.n})"><img class="th" src="${u.url}" alt=""><span class="cn">送れませんでした（タップで再送）</span><span class="tag">失敗</span></div>`
-  : `<div class="line crow up-run" id="u${u.n}"><img class="th" src="${u.url}" alt=""><span class="cn"><span class="shim">AIが読み取り中…</span></span><span class="tag">読取中</span></div>`;
+  : `<div class="line crow up-run" id="u${u.n}"><img class="th" src="${u.url}" alt=""><span class="cn" aria-label="AIが読み取り中"><span class="shim"></span></span><span class="tag">読取中</span></div>`;
 function enqueue(id, files) {
   const q = UPQ[id] = UPQ[id] || [];
   files.forEach(f => q.push({ n: ++UPN, f, url: URL.createObjectURL(f), st: 'wait' }));
+  const st = UPS[id] = UPS[id] || { total: 0, done: 0 }; st.total += files.length;
   UPLOADING = true; refreshUp(id, true);
   for (let w = UPWORK; w < 3; w++) upWorker(id); // 3枚ずつ同時に送る（AI無料枠の回数制限に当たりにくい数）
 }
@@ -518,13 +639,13 @@ async function upWorker(id) {
     try {
       const img = await toB64(u.f);
       const r = await run('api_upload', id, img.b64, img.mime);
-      UPQ[id] = UPQ[id].filter(x => x !== u);
+      UPQ[id] = UPQ[id].filter(x => x !== u); UPS[id].done++; haptic();
       if (r.type === 'photo') { if (S.ev && S.ev.id === id) S.ev.photos++; toast('会場写真として保存しました', 1500); }
       else if (S.ev && S.ev.id === id) S.contacts.push(r);
       cacheEv(); refreshUp(id, false, u, r);
-    } catch (err) { u.st = 'ng'; u.err = err.message || String(err); refreshUp(id, false, u); }
+    } catch (err) { u.st = 'ng'; u.err = err.message || String(err); UPS[id].done++; refreshUp(id, false, u); }
   }
-  if (--UPWORK === 0) { UPLOADING = false; const ng = (UPQ[id] || []).length; toast(ng ? `${ng}枚 送れませんでした。行をタップで再送できます` : '取り込みが終わりました', 3000); if (S.ev && S.ev.id === id && !busy()) renderEvent(true); }
+  if (--UPWORK === 0) { UPLOADING = false; UPS[id] = { total: 0, done: 0 }; const ng = (UPQ[id] || []).length; toast(ng ? `${ng}枚 送れませんでした。行をタップで再送できます` : '取り込みが終わりました', 3000); if (S.ev && S.ev.id === id && !busy()) renderEvent(true); }
 }
 function retryUp(n) {
   const id = S.ev.id, u = (UPQ[id] || []).find(x => x.n === n); if (!u) return;
@@ -533,7 +654,7 @@ function retryUp(n) {
 // 画面全体は描き直さず、その行と見出しだけを差し替える（打ちかけのメモが消えないように）
 function refreshUp(id, added, u, r) {
   if (!S.ev || S.ev.id !== id || !$('#cards')) return;
-  $('#dropt').innerHTML = upLabel(id);
+  $('#dropt').innerHTML = upLabel(id); $('#dropt').classList.toggle('busy', upBusy(id));
   if (added) { const box = $('#cards'); [...UPQ[id]].reverse().forEach(x => { if (!$('#u' + x.n)) box.insertAdjacentHTML('afterbegin', upRow(x)); }); return; }
   const row = u && $('#u' + u.n); if (!row) return;
   if (!r) { row.outerHTML = upRow(u); return; }
@@ -726,12 +847,12 @@ function swipe() {
       <button class="${c.schedMode === 'ask' ? 'on' : ''}" onclick="setSched('ask')">日程を聞く</button></div>
       ${c.schedMode !== 'ask' ? [0,1,2].map(j => `<label class="lab" style="margin:10px 0 4px" for="dt${j}">候補${j + 1}</label><input type="datetime-local" id="dt${j}" data-j="${j}" value="${esc((c.dtRaw || [])[j] || '')}" onchange="setDate()">`).join('') : ''}</div>` : '';
   view(head('確認と承認', `${i}/${all.length}`, `openEvent('${ev.id}')`) + `
-    <div style="height:3px;background:#EEE"><div style="width:${(i - 1) / all.length * 100}%;height:3px;background:#191919"></div></div>
+    <div class="steps"><i style="width:${(i - 1) / all.length * 100}%"></i></div>
     <div class="deck"><article class="card" id="card">
       <div><div class="co">${esc(c.company)}${c.dept ? '・' + esc(c.dept) : ''}${c.title ? '・' + esc(c.title) : ''}</div><div class="nm">${esc(c.name || '（氏名未読取）')} 様</div></div>
       <div class="tags"><span class="tag k">${esc(SCENE[c.scene])}${c.block ? '・' + esc((BLOCKS[c.scene] || {})[c.block] || '') : ''}</span>
         ${c.biz && c.biz !== 'なし' ? `<span class="tag">${esc(c.biz)}事業</span>` : ''}${c.deep ? '<span class="tag">深く話せた</span>' : ''}${(c.reunion || []).length ? '<span class="tag">再会</span>' : ''}</div>
-      ${c.note ? `<p style="margin:0;font-size:14px;line-height:1.7;color:#374151">${esc(c.note)}</p>` : ''}
+      ${c.note ? `<p style="margin:0;font-size:15px;line-height:1.6;color:var(--sub)">${esc(c.note)}</p>` : ''}
       ${c.next && c.next !== 'なし' ? `<div class="kv"><span>次にやること</span><span>${esc(c.next)}${c.due ? '・' + esc(c.due) + 'まで' : ''}</span></div>` : ''}
       ${sched}
       <div><span class="lab">メール（宛先 ${esc(c.email || '未読取')}・${sendDay()} 6:30 送信）</span><div class="mail">件名：${esc(c.subject)}\n\n${esc(c.body)}</div></div>
@@ -739,9 +860,9 @@ function swipe() {
       ${/〇/.test(c.subject + c.body) ? '<div class="err">「〇〇」が残っています。「全文を見る・直す」で埋めてください</div>' : ''}
       <button class="btn2" onclick="edit()">全文を見る・直す</button>
     </article></div>
-    <div class="foot" style="border:0;background:#FAFAFA"><div class="acts">
-      <button class="round" aria-label="直す" onclick="edit()">✎</button>
-      <button class="round ok" aria-label="承認" onclick="approve()">✓</button></div>
+    <div class="foot" style="border:0;background:none;-webkit-backdrop-filter:none;backdrop-filter:none"><div class="acts">
+      <button class="round" aria-label="直す" onclick="edit()">${svg(IC.pencil, 1.8)}</button>
+      <button class="round ok" aria-label="承認" onclick="approve()">${svg(IC.check, 2.8)}</button></div>
       <span class="note">← 直す　　右にスワイプで承認 →</span></div>`);
   window.C = c;
   // 横にはっきり動かしたときだけスワイプとみなす（縦スクロール中の誤承認を防ぐ）。入力欄の上では反応しない
@@ -773,6 +894,7 @@ async function setDate() {
 
 const PEND = [];
 async function approve() {
+  haptic();
   const c = C, card = $('#card');
   const err = !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c.email || '') ? 'メールアドレスを確認してください'
     : /〇/.test(c.subject + c.body) ? '「〇〇」が残っています。直してから承認してください' : '';
