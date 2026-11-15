@@ -238,7 +238,7 @@ table.t input,table.t select{background:var(--fill)}
 <script>
 // 通信先：Apps Script。画面がGitHub Pagesにあるときは fetch、Apps Script上で開いたときは google.script.run
 // バージョン：直したら上げる（大きな機能追加は 1.x、小さな修正は 1.0.x）
-const VERSION = '2.3.0';
+const VERSION = '2.4.0';
 const ver = () => `<p class="ver">MW Desk v${VERSION}</p>`;
 const API_URL = 'https://mw-desk.miraiway.workers.dev';
 const store = { get: k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } },
@@ -1095,7 +1095,7 @@ function done() {
   const pad = n => String(n).padStart(2, '0'), loc = t => `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}T${pad(t.getHours())}:${pad(t.getMinutes())}`;
   const def = at && mode === 'at' ? new Date(at.sendAt) : new Date(Date.now() + 3600e3);
   view(head(ev.name, '', `openEvent('${ev.id}')`) + `<main>
-    <div><span class="note" style="text-align:left;display:block">${ap.length ? (mode === 'now' ? '送信しています…（1分ほどで送信済みになります）' : `${sendLabel(ap[0])} に送信します`) : 'すべて送信済みです'}</span>
+    <div><span class="note" style="text-align:left;display:block">${ap.length ? (mode === 'now' ? '送信しています…（1分ほどで送信済みになります）' : `${sendLabel(ap[0])} に送信します`) : sent.length ? '予約中のメールはありません' : '予約中のメールはありません。承認すると予約されます'}</span>
       <p style="margin:4px 0"><span class="big">${ap.length}</span> <b>件のメールを予約しました</b></p>
       <span class="note" style="text-align:left;display:block">送信前ならいつでも取り消し・修正できます</span></div>
     ${ap.length && mode !== 'now' ? `<div><div class="h2">送信のタイミング</div>
@@ -1109,7 +1109,8 @@ function done() {
         <button class="btn" style="width:auto;padding:0 18px;height:48px" onclick="setSend('at')">決定</button>
       </div></div>` : ''}
     <div><div class="h2">内訳</div>${Object.keys(by).sort().map(s => `<div class="line"><span>${SCENE[s]}</span><span>${by[s]}</span></div>`).join('')}</div>
-    <div><div class="h2">予約中</div>${ap.map(c => `<div class="line"><span>${esc(c.company)} ${esc(c.name)}<br><small class="note">${sendLabel(c)} 送信</small></span><button onclick="cancelC('${c.id}')">取り消して直す</button></div>`).join('')}</div>
+    ${ap.length ? `<div><div class="h2"><span>予約中</span><span>行をタップで直す</span></div>${ap.map(c => `<div class="line"><span style="cursor:pointer" onclick="cancelC('${c.id}')">${esc(c.company)} ${esc(c.name)}<br><small class="note">${sendLabel(c)} 送信</small></span><button onclick="cancelOnly('${c.id}')">取り消す</button></div>`).join('')}
+      <button class="btn2" style="color:var(--red);margin-top:14px" onclick="cancelAll()">予約をすべて取り消す</button></div>` : ''}
     ${sent.length ? `<span class="note">送信済み ${sent.length}件</span>` : ''}
     <span class="note">名刺 ${S.contacts.length}枚・写真 ${ev.photos}枚は、まもなく Drive のイベントフォルダに整理されます</span>
   </main><div class="foot"><button class="btn" onclick="report()">終了報告を仕上げる</button><button class="btn2" onclick="home()">ホームへ</button></div>`);
@@ -1128,6 +1129,19 @@ async function setSend(mode) {
     cacheEv(); done();
     toast(mode === 'now' ? '送信を始めました' : mode === 'at' ? `${sendLabel(ap[0])} に送信します` : '翌朝 6:30 に送信します');
   } catch (e) { fail(e); }
+}
+// 予約だけを取り消す（承認前に戻すので送られない。画面はそのまま）
+function cancelOnly(id) {
+  const c = S.contacts.find(x => x.id === id);
+  if (!confirm(`${c.company || ''} ${c.name || ''} 様へのメールの予約を取り消しますか？`)) return;
+  haptic(); c.status = 'draft'; c.sendAt = null; cacheEv(); done(); toast('予約を取り消しました（未承認に戻りました）');
+  bg(run('api_cancel', id), () => { c.status = 'approved'; done(); });
+}
+function cancelAll() {
+  const ap = S.contacts.filter(c => c.status === 'approved');
+  if (!ap.length || !confirm(`予約中の ${ap.length}件をすべて取り消しますか？\n（送信済みのメールは取り消せません）`)) return;
+  haptic(); ap.forEach(c => { c.status = 'draft'; c.sendAt = null; }); cacheEv(); done(); toast(`${ap.length}件の予約を取り消しました`);
+  bg(run('api_cancelAll', S.ev.id), () => { ap.forEach(c => c.status = 'approved'); done(); });
 }
 function cancelC(id) {
   const c = S.contacts.find(x => x.id === id);
