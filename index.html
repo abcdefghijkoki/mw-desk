@@ -82,6 +82,10 @@ main{flex:1;padding:16px;display:flex;flex-direction:column;gap:20px}
 .btn2{height:50px;border-radius:14px;border:0;background:var(--fill);font-size:17px;font-weight:500;width:100%;color:var(--tint)}
 .note{font-size:13px;color:var(--sub);text-align:center}
 .err{color:var(--red);font-size:13px}
+#demobar{position:fixed;top:max(8px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:10;display:flex;align-items:center;gap:10px;padding:6px 6px 6px 14px;border-radius:999px;background:var(--orange);color:#fff;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.2);white-space:nowrap}
+#demobar span{opacity:.9}#demobar button{border:0;border-radius:999px;background:rgba(255,255,255,.25);color:#fff;font-size:13px;font-weight:600;padding:5px 12px}
+body:has(#demobar) header,body:has(#demobar) .lt{padding-top:max(48px,calc(env(safe-area-inset-top) + 40px))}
+body:has(#demobar) .bar{margin-top:44px}
 .ver{margin:4px 0 0;text-align:center;font-size:11px;color:var(--ter);letter-spacing:.04em}
 
 /* 入力 */
@@ -238,7 +242,7 @@ table.t input,table.t select{background:var(--fill)}
 <script>
 // 通信先：Apps Script。画面がGitHub Pagesにあるときは fetch、Apps Script上で開いたときは google.script.run
 // バージョン：直したら上げる（大きな機能追加は 1.x、小さな修正は 1.0.x）
-const VERSION = '2.4.0';
+const VERSION = '2.5.0';
 const ver = () => `<p class="ver">MW Desk v${VERSION}</p>`;
 const API_URL = 'https://mw-desk.miraiway.workers.dev';
 const store = { get: k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } },
@@ -247,7 +251,7 @@ let K = store.get('mw_k');
 const $ = s => document.querySelector(s);
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 // Googleのログイン情報は送らない（credentials: 'omit'）。本文はtext/plainで送り、余計な事前確認の通信を起こさない
-const call = (fn, ...a) => window.google && google.script
+const call = (fn, ...a) => window.DEMO ? DEMO.call(fn, a) : window.google && google.script
   ? new Promise((ok, ng) => google.script.run.withSuccessHandler(ok).withFailureHandler(ng)[fn](...a))
   : fetch(API_URL, { method: 'POST', body: JSON.stringify({ fn, args: a }), credentials: 'omit', redirect: 'follow' })
       .catch(() => { throw new Error('通信できませんでした。電波を確認してもう一度お試しください'); })
@@ -395,6 +399,7 @@ const head = (t, s, back) => `<header><button class="icon" aria-label="戻る" o
 // ───── ホーム ─────
 // ───── ログイン（名前を選んで暗証番号。この端末に記憶） ─────
 async function login() {
+  if (window.DEMO) return exitDemo();
   if (K) cclear();
   store.set('mw_k', ''); K = '';
   const code = store.get('mw_c');
@@ -421,7 +426,9 @@ function teamCode(msg = '') {
     <div><label for="tc" class="req">チームコード</label><input id="tc" type="password" autocomplete="off" aria-required="true"></div>
     <span class="note" style="text-align:left">この端末では最初の1回だけです。コードはメンバー内で共有されています</span>
     ${msg ? `<span class="err">${esc(msg)}</span>` : ''}
-  </main><div class="foot"><button class="btn" id="go">次へ</button></div>`);
+  </main><div class="foot"><button class="btn" id="go">次へ</button>
+    <button class="btn2" onclick="startDemo()">デモを体験する（ログイン不要）</button>
+    <span class="note">デモは端末の中だけで動きます。メール送信・Drive・Slack には一切つながりません</span></div>`);
   const go = () => { const v = $('#tc').value.trim(); if (!v) return; store.set('mw_c', v); login(); };
   $('#go').onclick = go;
   $('#tc').onkeydown = e => { if (e.key === 'Enter') go(); };
@@ -921,7 +928,7 @@ function reportConfirm(text) {
 }
 
 // 名刺の画像（Cloudflareから直接読む。ブラウザが覚えるので2回目からは一瞬）
-const thumb = (c, cls) => c.fileKey ? `<img class="${cls}" loading="lazy" alt="名刺" src="${API_URL}?img=${encodeURIComponent(c.fileKey)}&k=${K}">` : `<span class="${cls}"></span>`;
+const thumb = (c, cls) => c.fileKey ? `<img class="${cls}" loading="lazy" alt="名刺" src="${/^data:/.test(c.fileKey) ? c.fileKey : `${API_URL}?img=${encodeURIComponent(c.fileKey)}&k=${K}`}">` : `<span class="${cls}"></span>`;
 function openCard(id) {
   const row = document.querySelector(`.crow[data-c="${id}"]`);
   if (row && row.style.transform) { row.style.transform = ''; return; } // 削除ボタンが出ているときは閉じるだけ
@@ -1149,7 +1156,25 @@ function cancelC(id) {
   bg(run('api_cancel', id), () => { c.status = 'approved'; });
 }
 
-home();
+// ───── デモ版 ─────
+// ログインなしで全機能を試せる。通信先を端末の中の見本（demo.js）に切り替えるだけで、本物のデータには一切触れない
+function startDemo() {
+  sessionStorage.setItem('mw_demo', '1');
+  const sc = document.createElement('script'); sc.src = 'demo.js?v=' + VERSION;
+  sc.onload = () => {
+    K = 'demo-' + Date.now(); // 端末の一時保存も本物とは別にする
+    document.body.insertAdjacentHTML('beforeend', '<div id="demobar" role="status"><b>デモ版</b><span>送信・保存は行われません</span><button onclick="exitDemo()">終了</button></div>');
+    home();
+  };
+  sc.onerror = () => { sessionStorage.removeItem('mw_demo'); toast('デモを読み込めませんでした'); };
+  document.head.appendChild(sc);
+}
+function exitDemo() {
+  sessionStorage.removeItem('mw_demo');
+  try { Object.keys(localStorage).filter(k => k.startsWith('c:demo')).forEach(k => localStorage.removeItem(k)); } catch (e) {}
+  location.reload();
+}
+try { sessionStorage.getItem('mw_demo') ? startDemo() : home(); } catch (e) { home(); }
 </script>
 </body>
 </html>
