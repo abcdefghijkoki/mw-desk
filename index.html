@@ -154,6 +154,7 @@ main>.item+.item,#list>.item+.item,#llist>.item+.item{margin-top:-10px}
 
 /* 取り込み（タップする場所と、読み取り中のカード） */
 .drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:104px;border:1.5px dashed color-mix(in srgb,var(--tint) 45%,transparent);border-radius:16px;background:var(--tintbg);font-size:15px;font-weight:600;color:var(--tint);text-align:center;padding:14px;margin:0;cursor:pointer;transition:background-color .2s}
+.qres{display:flex;gap:14px;align-items:center;background:var(--card);border-radius:16px;padding:14px 16px;box-shadow:var(--shadow);animation:enter .3s cubic-bezier(.2,.8,.2,1)}.qres .th{width:72px;height:46px}.qres b{display:block;font-size:20px;font-weight:700;margin:2px 0}.qres small{display:block;font-size:13px;color:var(--sub)}
 .drop small{font-size:12px;font-weight:400;color:var(--sub)}
 .drop svg{width:30px;height:30px}
 .drop.busy{border:0;background:var(--card);box-shadow:var(--shadow);flex-direction:row;justify-content:flex-start;gap:14px;text-align:left;color:var(--ink);padding:14px 16px}
@@ -168,6 +169,10 @@ main>.item+.item,#list>.item+.item,#llist>.item+.item{margin-top:-10px}
 .up{display:flex;align-items:center;gap:12px;padding:6px 0;font-size:13px}.up img{width:56px;height:40px;object-fit:cover;border-radius:8px;flex:none}
 
 /* ホーム */
+.entry{font:inherit;text-align:left;border:0;border-radius:18px;padding:16px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;background:var(--card);color:var(--ink);box-shadow:var(--shadow);min-height:118px}
+.entry svg{width:30px;height:30px;color:var(--tint);margin-bottom:auto}
+.entry b{font-size:17px;font-weight:700;margin-top:10px}.entry small{font-size:13px;color:var(--sub)}
+.entry.main{background:var(--tint);color:#fff}.entry.main svg,.entry.main small{color:rgba(255,255,255,.85)}
 .stat{font:inherit;text-align:left;background:var(--card);color:inherit;border:0;border-radius:16px;padding:14px 16px;display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;box-shadow:var(--shadow)}
 .stat span{width:100%;font-size:13px;font-weight:600;color:var(--sub);display:flex;align-items:center;gap:6px}
 .stat span::before{content:'';width:8px;height:8px;border-radius:4px;background:var(--ter)}
@@ -233,7 +238,7 @@ table.t input,table.t select{background:var(--fill)}
 <script>
 // 通信先：Apps Script。画面がGitHub Pagesにあるときは fetch、Apps Script上で開いたときは google.script.run
 // バージョン：直したら上げる（大きな機能追加は 1.x、小さな修正は 1.0.x）
-const VERSION = '2.2.0';
+const VERSION = '2.3.0';
 const ver = () => `<p class="ver">MW Desk v${VERSION}</p>`;
 const API_URL = 'https://mw-desk.miraiway.workers.dev';
 const store = { get: k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } },
@@ -339,6 +344,7 @@ const IC = {
   people: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.5-3.5 3-5.5 6.5-5.500s6 2 6.5 5.5"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17.5 14.500c2.2 0 3.7 1.5 4 4"/>',
   camera: '<path d="M4 8h3l1.5-2.500h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13" r="3.5"/>',
   check: '<path d="m5 12.5 4.5 4.500L19 7"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
   pencil: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13.5 6.5 4 4"/>',
 };
 // 画面の左端から右へスワイプすると、前の画面に戻る（iOS と同じ操作）。戻る先は左上の「＜」と同じ
@@ -442,14 +448,19 @@ function renderHome() {
   const sum = S.sum;
   const d = new Date();
   view(large('MW Desk', `${d.getMonth() + 1}月${d.getDate()}日 ${'日月火水木金土'[d.getDay()]}曜日`, `<button class="avatar" aria-label="設定（${esc(S.me)}）" onclick="settings()">${esc((S.me || '?')[0])}</button>`) + `<main>
-    <button class="btn" onclick="newEvent()">＋ イベント作成</button>
+    <div class="row">
+      <button class="entry main" onclick="quick()">${svg(IC.camera, 1.8)}<b>名刺から送る</b><small>1人にすぐお礼メール</small></button>
+      <button class="entry" onclick="newEvent()">${svg(IC.plus, 2)}<b>イベント作成</b><small>まとめて取り込む</small></button>
+    </div>
     <div class="row">
       <button class="stat ${sum.drafts ? 'hot' : ''}" onclick="goDrafts()"><span>承認待ち</span><b>${sum.drafts}</b><small>件</small></button>
       <button class="stat ${sum.actions.length ? 'hot' : ''}" onclick="$('#todo') ? $('#todo').scrollIntoView({ behavior: 'smooth', block: 'start' }) : toast('期限が近いものはありません')"><span>期限が近い</span><b>${sum.actions.length}</b><small>件</small></button>
     </div>
     ${sum.actions.length ? `<section class="todo" id="todo"><h3>次にやること<small>7日以内・期限切れ</small></h3>${sum.actions.map(a => `<div class="titem"><span class="due ${a.late ? 'late' : ''}">${a.late ? '期限切れ' : a.due ? esc(a.due.slice(5).replace('-', '/')) + 'まで' : '期限なし'}</span><span class="tbody" onclick="contact('${a.id}')"><b>${esc(a.next)}</b>${esc(a.company)} ${esc(a.name)}</span><button onclick="actDone('${a.id}')">済にする</button></div>`).join('')}</section>` : ''}
     <div class="h2">自分のイベント</div>
-    ${S.events.map(e => `<button class="item" onclick="openEvent('${e.id}')">${esc(e.name)}${sum.draftsBy[e.id] ? ` <span class="tag k">承認待ち ${sum.draftsBy[e.id]}</span>` : ''}<small>${jpDate(e.date)}・${esc(e.members.join('、'))}</small></button>`).join('') || '<p class="note">まだありません</p>'}
+    ${S.events.filter(e => !e.solo).map(e => `<button class="item" onclick="openEvent('${e.id}')">${esc(e.name)}${sum.draftsBy[e.id] ? ` <span class="tag k">承認待ち ${sum.draftsBy[e.id]}</span>` : ''}<small>${jpDate(e.date)}・${esc(e.members.join('、'))}</small></button>`).join('') || '<p class="note">まだありません</p>'}
+    ${S.events.some(e => e.solo) ? `<div class="h2">個別に送った相手</div>
+    ${S.events.filter(e => e.solo).slice(0, 8).map(e => `<button class="item" onclick="openEvent('${e.id}')">${esc(e.name)}${sum.draftsBy[e.id] ? ` <span class="tag k">承認待ち</span>` : ''}<small>${jpDate(e.date)}</small></button>`).join('')}` : ''}
   ${ver()}</main>${tabs('home')}`);
 }
 function actDone(id) {
@@ -685,6 +696,70 @@ function renderEvent(keepScroll = false) {
   $('#addm').onclick = addMemo;
   $('#memo').onkeydown = e => { if (e.key === 'Enter' && !e.isComposing) addMemo(); };
   $('#up').onchange = e => { const files = [...e.target.files]; e.target.value = ''; if (files.length) enqueue(id, files); };
+}
+
+// ───── 名刺から1人に送る（イベント以外の入り口） ─────
+// 写真を選んだ瞬間に読み取りを始め、その間に「会った場面」と「話した内容」を入れてもらう
+// 中身は小さな「個別」イベント（solo）として保存するので、承認・送信時刻・Drive・リード管理はイベントと同じ
+let Q = null;
+function quick() {
+  const d = new Date(), iso = new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+  Q = { id: uuid(), card: null, date: iso };
+  view(head('名刺から送る', '', 'home()') + `<main>
+    <label class="drop" for="qp" id="qdrop">${svg(IC.camera, 1.7)}<span>名刺を撮る・選ぶ<br><small>1枚。すぐに AI が読み取ります</small></span></label>
+    <input id="qp" type="file" accept="image/*,.heic,.heif" style="display:none">
+    <div id="qcard"></div>
+    <div class="row"><div><label for="qd" class="req">会った日</label><input id="qd" type="date" value="${iso}"></div>
+      <div><label for="qn" class="req">会った場面</label><input id="qn" placeholder="御社での打ち合わせ"></div></div>
+    <div class="pills" style="margin-top:-8px">${['お打ち合わせ', '商談', 'ご紹介の場', '交流会', 'ご訪問'].map(t => `<button type="button" class="pill" onclick="$('#qn').value='${t}';haptic()">${t}</button>`).join('')}</div>
+    <span class="note" style="text-align:left;margin:-10px 4px 0">場面はメールの「昨日は〇〇にて」に入ります</span>
+    <div><label for="qt">どんな話をした？</label><textarea id="qt" placeholder="例）外国人採用に困っていて、人材事業の資料を送ると約束した（キーボードのマイクで話せます）"></textarea></div>
+  </main><div class="foot"><button class="btn" id="qgo" disabled>メールを作る</button></div>`);
+  $('#qp').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) quickRead(f); };
+  $('#qgo').onclick = quickMake;
+}
+async function quickRead(f) {
+  const id = Q.id, url = URL.createObjectURL(f);
+  Q.card = null; $('#qgo').disabled = true;
+  $('#qdrop').classList.add('busy');
+  $('#qdrop').innerHTML = `<i class="spin" role="progressbar" aria-label="読み取り中"></i><span><b>AIが名刺を読み取っています</b><br><small>そのまま場面と話した内容を入れられます</small></span>`;
+  $('#qcard').innerHTML = `<img class="cardimg" src="${url}" alt="名刺">`;
+  try {
+    CREATING[id] = CREATING[id] || run('api_createEvent', { id, name: '個別', date: Q.date, members: [S.me], solo: true });
+    await CREATING[id];
+    const img = await toB64(f);
+    const c = await run('api_upload', id, img.b64, img.mime);
+    if (Q.id !== id || !$('#qcard')) return; // 画面を離れていたら何もしない
+    if (c.type === 'photo') throw new Error('名刺として読み取れませんでした。名刺の写真を選んでください');
+    Q.card = c; haptic();
+    $('#qdrop').classList.remove('busy');
+    $('#qdrop').innerHTML = `${svg(IC.camera, 1.7)}<span>撮り直す・選び直す</span>`;
+    $('#qcard').innerHTML = `<div class="qres"><img class="th" src="${url}" alt=""><div><small>${esc([c.company, c.dept, c.title].filter(Boolean).join('・') || '社名未読取')}</small><b>${esc(c.name || '氏名未読取')} 様</b><small>${esc(c.email || 'メールアドレス未読取（あとで直せます）')}</small></div></div>`;
+    $('#qgo').disabled = false;
+  } catch (e) {
+    fail(e);
+    if ($('#qdrop')) { $('#qdrop').classList.remove('busy'); $('#qdrop').innerHTML = `${svg(IC.camera, 1.7)}<span>もう一度 撮る・選ぶ</span>`; }
+  }
+}
+async function quickMake() {
+  const name = $('#qn').value.trim(), date = $('#qd').value, talk = $('#qt').value.trim();
+  if (!Q.card) return toast('先に名刺を撮ってください');
+  if (!name || !date) return fail(new Error('会った日と場面を入れてください'));
+  const b = $('#qgo'); b.disabled = true;
+  const steps = [[0, '名刺の内容を確認中…'], [1.5, '話した内容を整理中…'], [3, 'テンプレートを選択中…'], [5, 'メールを作成中…']];
+  b.insertAdjacentHTML('beforebegin', '<div class="prog"><i id="bar"></i></div>');
+  const t0 = Date.now(), tick = setInterval(() => {
+    const s = (Date.now() - t0) / 1000; b.textContent = steps.filter(x => x[0] <= s).pop()[1];
+    $('#bar').style.width = Math.min(95, 100 * (1 - Math.exp(-s / 4))) + '%';
+  }, 300);
+  try {
+    const ev = await run('api_updateSolo', Q.id, { name, date });
+    const r = await run('api_assign', Q.id, talk);
+    clearInterval(tick); $('#bar').style.width = '100%';
+    Object.assign(S, r); S.ev = Object.assign(ev, r.ev || {}); cacheEv();
+    S.events = [S.ev].concat((S.events || []).filter(e => e.id !== S.ev.id));
+    setTimeout(swipe, 250);
+  } catch (e) { clearInterval(tick); fail(e); $('.prog') && $('.prog').remove(); b.disabled = false; b.textContent = 'メールを作る'; }
 }
 
 // ───── 名刺の取り込み（読み取り中も画面を止めない） ─────
