@@ -233,7 +233,7 @@ table.t input,table.t select{background:var(--fill)}
 <script>
 // 通信先：Apps Script。画面がGitHub Pagesにあるときは fetch、Apps Script上で開いたときは google.script.run
 // バージョン：直したら上げる（大きな機能追加は 1.x、小さな修正は 1.0.x）
-const VERSION = '2.1.0';
+const VERSION = '2.2.0';
 const ver = () => `<p class="ver">MW Desk v${VERSION}</p>`;
 const API_URL = 'https://mw-desk.miraiway.workers.dev';
 const store = { get: k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } },
@@ -320,6 +320,16 @@ function phoneMode(on) { store.set('mw_phone', on ? '1' : ''); location.reload()
 const oops = (e, retry) => view(`<main><p class="err" style="font-size:14px">${esc(e.message || e)}</p><button class="btn2" onclick="${retry}">もう一度読み込む</button></main>`);
 const STATUS = { draft: '未承認', approved: '予約済', sent: '送信済' };
 const sendDay = () => { const n = new Date(); return n.getHours() * 60 + n.getMinutes() < 390 ? '今日' : '明日'; };
+// 送信予定の表示（時刻指定がなければ翌朝6:30）
+const sendLabel = c => {
+  if (!c.sendAt) return `${sendDay()} 6:30`;
+  const t = new Date(c.sendAt);
+  if (t <= Date.now() + 60e3) return '今すぐ';
+  const d = new Date(), same = (a, b) => a.toDateString() === b.toDateString(), tm = `${t.getHours()}:${String(t.getMinutes()).padStart(2, '0')}`;
+  if (same(t, d)) return `今日 ${tm}`;
+  d.setDate(d.getDate() + 1);
+  return same(t, d) ? `明日 ${tm}` : `${t.getMonth() + 1}/${t.getDate()}（${'日月火水木金土'[t.getDay()]}）${tm}`;
+};
 // アイコン（線画。24pxの枠）
 const svg = (d, w = 2) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const IC = {
@@ -923,7 +933,7 @@ function swipe() {
       ${c.note ? `<p style="margin:0;font-size:15px;line-height:1.6;color:var(--sub)">${esc(c.note)}</p>` : ''}
       ${c.next && c.next !== 'なし' ? `<div class="kv"><span>次にやること</span><span>${esc(c.next)}${c.due ? '・' + esc(c.due) + 'まで' : ''}</span></div>` : ''}
       ${sched}
-      <div><span class="lab">メール（宛先 ${esc(c.email || '未読取')}・${sendDay()} 6:30 送信）</span><div class="mail">件名：${esc(c.subject)}\n\n${esc(c.body)}</div></div>
+      <div><span class="lab">メール（宛先 ${esc(c.email || '未読取')}・${sendLabel(c)} 送信）</span><div class="mail">件名：${esc(c.subject)}\n\n${esc(c.body)}</div></div>
       ${c.reason ? `<div class="reason">AIの判断：${esc(c.reason)}</div>` : ''}
       ${/〇/.test(c.subject + c.body) ? '<div class="err">「〇〇」が残っています。「全文を見る・直す」で埋めてください</div>' : ''}
       <button class="btn2" onclick="edit()">全文を見る・直す</button>
@@ -1006,15 +1016,43 @@ function done() {
   const ev = S.ev, ap = S.contacts.filter(c => c.status === 'approved'), sent = S.contacts.filter(c => c.status === 'sent');
   if (PEND.length) Promise.allSettled(PEND.splice(0)).then(() => run('api_organizeSoon').catch(() => {}));
   const by = {}; ap.forEach(c => by[c.scene] = (by[c.scene] || 0) + 1);
+  const at = ap.find(c => c.sendAt), mode = !at ? 'morning' : new Date(at.sendAt) <= Date.now() + 60e3 ? 'now' : 'at';
+  const pad = n => String(n).padStart(2, '0'), loc = t => `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}T${pad(t.getHours())}:${pad(t.getMinutes())}`;
+  const def = at && mode === 'at' ? new Date(at.sendAt) : new Date(Date.now() + 3600e3);
   view(head(ev.name, '', `openEvent('${ev.id}')`) + `<main>
-    <div><span class="note" style="text-align:left;display:block">${sendDay()} 6:30 に送信します</span>
+    <div><span class="note" style="text-align:left;display:block">${ap.length ? (mode === 'now' ? '送信しています…（1分ほどで送信済みになります）' : `${sendLabel(ap[0])} に送信します`) : 'すべて送信済みです'}</span>
       <p style="margin:4px 0"><span class="big">${ap.length}</span> <b>件のメールを予約しました</b></p>
       <span class="note" style="text-align:left;display:block">送信前ならいつでも取り消し・修正できます</span></div>
+    ${ap.length && mode !== 'now' ? `<div><div class="h2">送信のタイミング</div>
+      <div class="seg" style="margin-top:14px" role="radiogroup" aria-label="送信のタイミング">
+        <button class="${mode === 'morning' ? 'on' : ''}" onclick="setSend('morning')">翌朝 6:30</button>
+        <button onclick="setSend('now')">今すぐ</button>
+        <button class="${mode === 'at' ? 'on' : ''}" onclick="$('#atbox').style.display='flex';this.parentNode.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b===this))">日時を指定</button>
+      </div>
+      <div id="atbox" style="display:${mode === 'at' ? 'flex' : 'none'};gap:8px;margin-top:10px">
+        <input type="datetime-local" id="sendat" value="${loc(def)}" min="${loc(new Date())}" aria-label="送信する日時" style="flex:1">
+        <button class="btn" style="width:auto;padding:0 18px;height:48px" onclick="setSend('at')">決定</button>
+      </div></div>` : ''}
     <div><div class="h2">内訳</div>${Object.keys(by).sort().map(s => `<div class="line"><span>${SCENE[s]}</span><span>${by[s]}</span></div>`).join('')}</div>
-    <div><div class="h2">予約中</div>${ap.map(c => `<div class="line"><span>${esc(c.company)} ${esc(c.name)}</span><button onclick="cancelC('${c.id}')">取り消して直す</button></div>`).join('')}</div>
+    <div><div class="h2">予約中</div>${ap.map(c => `<div class="line"><span>${esc(c.company)} ${esc(c.name)}<br><small class="note">${sendLabel(c)} 送信</small></span><button onclick="cancelC('${c.id}')">取り消して直す</button></div>`).join('')}</div>
     ${sent.length ? `<span class="note">送信済み ${sent.length}件</span>` : ''}
     <span class="note">名刺 ${S.contacts.length}枚・写真 ${ev.photos}枚は、まもなく Drive のイベントフォルダに整理されます</span>
   </main><div class="foot"><button class="btn" onclick="report()">終了報告を仕上げる</button><button class="btn2" onclick="home()">ホームへ</button></div>`);
+}
+// 送信のタイミングを変える（自分の承認済みメールにまとめて）
+async function setSend(mode) {
+  const ev = S.ev, ap = S.contacts.filter(c => c.status === 'approved');
+  let at = '';
+  if (mode === 'now' && !confirm(`${ap.length}件のメールを今すぐ送信します。送信後は取り消せません。よろしいですか？`)) return;
+  if (mode === 'at') { at = $('#sendat').value; if (!at) return toast('日時を選んでください'); if (new Date(at) < Date.now()) return toast('過ぎた日時は選べません'); }
+  haptic();
+  await Promise.allSettled(PEND.splice(0)); // 承認の保存が終わってから
+  try {
+    const r = await run('api_setSendTime', ev.id, mode, at);
+    r.forEach(x => { const c = S.contacts.find(y => y.id === x.id); if (c) c.sendAt = x.sendAt; });
+    cacheEv(); done();
+    toast(mode === 'now' ? '送信を始めました' : mode === 'at' ? `${sendLabel(ap[0])} に送信します` : '翌朝 6:30 に送信します');
+  } catch (e) { fail(e); }
 }
 function cancelC(id) {
   const c = S.contacts.find(x => x.id === id);
