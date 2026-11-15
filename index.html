@@ -242,7 +242,7 @@ table.t input,table.t select{background:var(--fill)}
 <script>
 // 通信先：Apps Script。画面がGitHub Pagesにあるときは fetch、Apps Script上で開いたときは google.script.run
 // バージョン：直したら上げる（大きな機能追加は 1.x、小さな修正は 1.0.x）
-const VERSION = '2.5.0';
+const VERSION = '2.5.1';
 const ver = () => `<p class="ver">MW Desk v${VERSION}</p>`;
 const API_URL = 'https://mw-desk.miraiway.workers.dev';
 const store = { get: k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } },
@@ -411,7 +411,7 @@ async function login() {
   view(head('MW Desk') + `<main>
     <div class="h2">あなたはどなたですか？</div>
     ${names.map(n => `<button class="item" onclick="pick(this.textContent)">${esc(n)}</button>`).join('')}
-  </main>`);
+  </main><div class="foot"><button class="btn2" onclick="startDemo()">デモに戻る</button></div>`);
 }
 async function pick(name) {
   try {
@@ -422,13 +422,12 @@ async function pick(name) {
 }
 // 端末ごとに最初の1回だけ、チーム共通コードを入れる
 function teamCode(msg = '') {
-  view(head('MW Desk') + `<main>
+  view(head('メンバーログイン', 'MiraiWay メンバー専用') + `<main>
     <div><label for="tc" class="req">チームコード</label><input id="tc" type="password" autocomplete="off" aria-required="true"></div>
     <span class="note" style="text-align:left">この端末では最初の1回だけです。コードはメンバー内で共有されています</span>
     ${msg ? `<span class="err">${esc(msg)}</span>` : ''}
   </main><div class="foot"><button class="btn" id="go">次へ</button>
-    <button class="btn2" onclick="startDemo()">デモを体験する（ログイン不要）</button>
-    <span class="note">デモは端末の中だけで動きます。メール送信・Drive・Slack には一切つながりません</span></div>`);
+    <button class="btn2" onclick="startDemo()">デモに戻る</button></div>`);
   const go = () => { const v = $('#tc').value.trim(); if (!v) return; store.set('mw_c', v); login(); };
   $('#go').onclick = go;
   $('#tc').onkeydown = e => { if (e.key === 'Enter') go(); };
@@ -1159,22 +1158,22 @@ function cancelC(id) {
 // ───── デモ版 ─────
 // ログインなしで全機能を試せる。通信先を端末の中の見本（demo.js）に切り替えるだけで、本物のデータには一切触れない
 function startDemo() {
-  sessionStorage.setItem('mw_demo', '1');
+  sessionStorage.setItem('mw_demo', '1'); sessionStorage.removeItem('mw_member');
   const sc = document.createElement('script'); sc.src = 'demo.js?v=' + VERSION;
   sc.onload = () => {
     K = 'demo-' + Date.now(); // 端末の一時保存も本物とは別にする
-    document.body.insertAdjacentHTML('beforeend', '<div id="demobar" role="status"><b>デモ版</b><span>送信・保存は行われません</span><button onclick="exitDemo()">終了</button></div>');
+    document.body.insertAdjacentHTML('beforeend', '<div id="demobar" role="status"><b>デモ版</b><span>送信・保存は行われません</span><button onclick="exitDemo()">メンバーログイン</button></div>');
     home();
   };
   sc.onerror = () => { sessionStorage.removeItem('mw_demo'); toast('デモを読み込めませんでした'); };
   document.head.appendChild(sc);
 }
 function exitDemo() {
-  sessionStorage.removeItem('mw_demo');
+  sessionStorage.removeItem('mw_demo'); sessionStorage.setItem('mw_member', '1');
   try { Object.keys(localStorage).filter(k => k.startsWith('c:demo')).forEach(k => localStorage.removeItem(k)); } catch (e) {}
   location.reload();
 }
-try { sessionStorage.getItem('mw_demo') ? startDemo() : home(); } catch (e) { home(); }
+try { K || sessionStorage.getItem('mw_member') ? home() : startDemo(); } catch (e) { home(); }
 </script>
 </body>
 </html>
